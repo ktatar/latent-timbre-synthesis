@@ -34,13 +34,13 @@ hop_length = config['audio'].getint('hop_length')
 bins_per_octave = config['audio'].getint('bins_per_octave')
 num_octaves = config['audio'].getint('num_octaves')
 n_bins = int(8 * bins_per_octave)
-n_iter=config['audio'].getint('n_iter')
+n_iter = config['audio'].getint('n_iter')
 
 #dataset
 dataset = config['dataset'].get('datapath')
 cqt_dataset = config['dataset'].get('cqt_dataset')
 workspace = config['dataset'].get('workspace')
-dataset = config['dataset'].getint('run_number')
+run_number = config['dataset'].getint('run_number')
 
 if not os.path.exists(dataset):
     parser.error("dataset folder '%s' not found"%dataset)
