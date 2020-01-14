@@ -172,7 +172,7 @@ callbacks = [
 ]
 
 if learning_schedule:
-  learning_rate = keras.optimizers.schedules.ExponentialDecay(
+  learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(
     learning_rate*100,
     decay_steps=int(epochs*0.8),
     decay_rate=0.96,
