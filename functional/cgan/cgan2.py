@@ -53,8 +53,8 @@ if not continue_training:
     run_id = 0
     while True:
         try:
-            my_runs = os.path.join(DATASET, DESCRIPTION)
-            workdir = os.path.join(my_runs, 'run-%03d' % (run_id)) 
+            #my_runs = os.path.join(DATASET, DESCRIPTION)
+            workdir = os.path.join(DESCRIPTION, 'run-%03d' % (run_id)) 
             print(workdir)
             os.makedirs(workdir)
             break
@@ -285,8 +285,8 @@ def generate_and_save_images(model, epoch, test_input):
       plt.axis('off')
 
   plt.savefig(os.path.join(image_dir,'image_at_epoch_{:04d}.png'.format(epoch)))
-  plt.close()
-#  plt.show()
+  #plt.close()
+  plt.show()
   
 # Train the model
 
