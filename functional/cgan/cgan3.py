@@ -13,50 +13,87 @@ from tensorflow.keras import optimizers
 from tensorflow.keras import Model
 import time
 
-from IPython import display
+#from IPython import display
 
 #Parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str, default ='./default_cgt.ini' , help='path to the config file')
+parser.add_argument('--config', type=str, default ='./default-tatar.ini' , help='path to the config file')
 args = parser.parse_args()
 
-#Get configs
+##Get configs
 config_path = args.config
 config = configparser.ConfigParser(allow_no_value=True)
-if not os.path.exists(config_path):
-    config.Error("config file '%s' not found"%config_path)
-    sys.exit()
-config.read(config_path)
+try: 
+  config.read(config_path)
+except FileNotFoundError:
+  print('Config File Not Found at {}'.format(config_path))
+  sys.exit()
 
-# get values from config 
-datapath = config['dataset'].get('datapath')
-dataset_name = config['dataset'].get('cqt_dataset')
-dataset_path = os.path.join(datapath, dataset_name)
-os.makedirs(dataset_path,exist_ok=True)
+#import audio configs 
+sample_rate = config['audio'].getint('sample_rate')
+hop_length = config['audio'].getint('hop_length')
+bins_per_octave = config['audio'].getint('bins_per_octave')
+num_octaves = config['audio'].getint('num_octaves')
+n_bins = int(num_octaves * bins_per_octave)
+n_iter = config['audio'].getint('n_iter')
 
-image_shape = (48, 8)
-filter_size = (5, 5)
-BUFFER_SIZE = 60000
-BATCH_SIZE = config['training'].getint('batch_size')
+#dataset
+dataset = config['dataset'].get('datapath')
+cqt_dataset = config['dataset'].get('cqt_dataset')
+workspace = config['dataset'].get('workspace')
+run_number = config['dataset'].getint('run_number')
+
+if not os.path.exists(dataset):
+    parser.error("dataset folder '%s' not found"%dataset)
+    sys.exit() 
+
+my_cqt = os.path.join(dataset, cqt_dataset)
+
+if not os.path.exists(my_cqt):
+    parser.error("npy folder '%s' not found. Run create_dataset.py first. "%my_cqt)
+    sys.exit() 
+
+my_audio = os.path.join(dataset, 'audio')
+    
+#Training configs
+epochs = config['training'].getint('epochs')
+learning_rate = config['training'].getfloat('learning_rate')
+batch_size = config['training'].getint('batch_size')
+train_buf = config['training'].getint('buffer_size')
+buffer_size_dataset = config['training'].getboolean('buffer_size_dataset')
+max_to_keep = config['training'].getint('max_ckpts_to_keep')
+ckpt_epochs = config['training'].getint('checkpoint_epochs')
 continue_training = config['training'].getboolean('continue_training')
-LATENT_DIM = config['CGAN'].getint('latent_dim')
-EPOCHS = config['training'].getint('epochs')
-DATASET = config['dataset'].get('datapath')
-DESCRIPTION  = config['extra'].get('description')
+learning_schedule = config['training'].getboolean('learning_schedule')
+save_best_only = config['training'].getboolean('save_best_only')
 
-print("BATCH_SIZE", BATCH_SIZE)
-print("LATENT_DIM", LATENT_DIM)
-print("EPOCHS", EPOCHS)
+
+#Model configs
+image_shape = (bins_per_octave, num_octaves)
+kernelsize = config['CGAN'].getint('kernelsize')
+kernel_size = (kernelsize, kernelsize)
+generator_filters = config['CGAN'].getint('generator_filters')
+discriminator_filters = config['CGAN'].getint('discriminator_filters')
+generator_activation = config['CGAN'].get('generator_activation')
+latent_dim = config['CGAN'].getint('latent_dim')
+
+#etc
+desc = config['extra'].get('description')
+start_time = time.time()
+config['extra']['start'] = time.asctime( time.localtime(start_time) )
+
+AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 #Create workspace
 if not continue_training:
-    run_id = 0
+    run_id = run_number
     while True:
         try:
-            my_runs = os.path.join(DATASET, DESCRIPTION)
+            my_runs = os.path.join(dataset, desc)
             workdir = os.path.join(my_runs, 'run-%03d' % (run_id)) 
-            print(workdir)
             os.makedirs(workdir)
+            print(workdir)
+
             break
         except OSError:
             if os.path.isdir(workdir):
@@ -73,10 +110,10 @@ print('creating the dataset...')
 training_array = []
 new_loop = True
 
-for f in os.listdir(dataset_path): 
+for f in os.listdir(my_cqt): 
     if f.endswith('.npy'):
         print('adding-> %s' % f)
-        new_array = np.load(os.path.join(dataset_path,f))
+        new_array = np.load(os.path.join(my_cqt,f))
         if new_loop:
             training_array = new_array
             new_loop = False
@@ -84,10 +121,12 @@ for f in os.listdir(dataset_path):
             training_array = np.concatenate((training_array, new_array), axis=0)
 
 print('Total number of CQT frames: {}'.format(len(training_array)))
+if buffer_size_dataset:
+  train_buf = len(training_array)
 
-training_array = training_array.reshape((training_array.shape[0], 48, 8, 1))
+#training_array = training_array.reshape((training_array.shape[0], bins_per_octave, num_octaves, 1))
 train_dataset = tf.data.Dataset.from_tensor_slices(training_array)
-train_dataset = train_dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+train_dataset = train_dataset.shuffle(train_buf).batch(batch_size).prefetch(AUTOTUNE)
 
 
 # Create the models
@@ -97,19 +136,20 @@ train_dataset = train_dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
 # The Generator
 
 def make_generator_model():
-    in_lat = layers.Input(shape=(LATENT_DIM,))
-    x = layers.Dense(image_shape[0] // 4 * image_shape[1]// 4 * 256, use_bias=False)(in_lat)
+    in_lat = layers.Input(shape=(latent_dim,))
+    x = layers.Dense(image_shape[0] // 4 * image_shape[1]// 4 * generator_filters, use_bias=False)(in_lat)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
-    x = layers.Reshape((image_shape[0] // 4, image_shape[1] // 4, 256))(x)
-    x = layers.Conv2DTranspose(128, (5, 5), strides=(1, 1), padding='same', use_bias=False)(x)
+    x = layers.Reshape((image_shape[0] // 4, image_shape[1] // 4, generator_filters))(x)
+    x = layers.Conv2DTranspose(generator_filters//2, kernel_size, strides=(1, 1), padding='same', use_bias=False)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
-    x = layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
+    x = layers.Conv2DTranspose(generator_filters//4, kernel_size, strides=(2, 2), padding='same', use_bias=False)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
-    out_img = layers.Conv2DTranspose(1, filter_size, strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
-    
+    x = layers.Conv2DTranspose(1, kernel_size, strides=(2, 2), padding='same', use_bias=False, activation=generator_activation)(x)
+    out_img = layers.Reshape(target_shape=(n_bins,))(x)
+
     # define model
     model = Model(in_lat, out_img)
     return model
@@ -119,7 +159,7 @@ generator = make_generator_model()
 generator.summary()
 #tf.keras.utils.plot_model(generator, show_shapes=True, dpi=64)
 
-noise = tf.random.normal([1, LATENT_DIM])
+noise = tf.random.normal([1, latent_dim])
 generated_image = generator(noise, training=False)
 
 #plt.imshow(generated_image[0, :, :, 0], cmap='gray')
@@ -127,11 +167,12 @@ generated_image = generator(noise, training=False)
 # The Discriminator
 
 def make_discriminator_model():
-    in_img = layers.Input(shape=(image_shape[0], image_shape[1], 1))
-    x = layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same')(in_img)
+    in_img = layers.Input(shape=(n_bins,))
+    x = layers.Reshape(target_shape=(bins_per_octave, num_octaves, 1))(in_img)
+    x = layers.Conv2D(discriminator_filters, (5, 5), strides=(2, 2), padding='same')(x)
     x = layers.LeakyReLU()(x)
     x = layers.Dropout(0.3)(x)
-    x = layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same')(x)
+    x = layers.Conv2D(discriminator_filters*2, (5, 5), strides=(2, 2), padding='same')(x)
     x = layers.LeakyReLU()(x)
     x = layers.Dropout(0.3)(x)
     x = layers.Flatten()(x)
@@ -144,7 +185,7 @@ def make_discriminator_model():
 discriminator = make_discriminator_model()
 
 discriminator.summary()
-tf.keras.utils.plot_model(discriminator, show_shapes=True, dpi=64)
+#tf.keras.utils.plot_model(discriminator, show_shapes=True, dpi=64)
 
 decision = discriminator(generated_image)
 #print (decision)
@@ -181,8 +222,8 @@ def generator_loss(fake_output):
 # The discriminator and the generator optimizers are different since we will train 
 # two networks separately.
     
-generator_optimizer = tf.keras.optimizers.Adam(1e-4)
-discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+generator_optimizer = tf.keras.optimizers.Adam(learning_rate)
+discriminator_optimizer = tf.keras.optimizers.Adam(learning_rate)
 
 # Save checkpoints
 
@@ -195,7 +236,9 @@ checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
                                  discriminator_optimizer=discriminator_optimizer,
                                  generator=generator,
-                                 discriminator=discriminator)
+                                 discriminator=discriminator, step=tf.Variable(0))
+manager = tf.train.CheckpointManager(
+    checkpoint, directory=checkpoint_prefix, max_to_keep=max_to_keep)
 
 # Define the training loop
 
@@ -203,7 +246,7 @@ num_examples_to_generate = 16
 
 # We will reuse this seed overtime (so it's easier)
 # to visualize progress in the animated GIF)
-seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
+seed = tf.random.normal([num_examples_to_generate, latent_dim])
 
 # The training loop begins with generator receiving a random seed as input. 
 # That seed is used to produce an image. The discriminator is then used to classify real 
@@ -215,7 +258,7 @@ seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
 # This annotation causes the function to be "compiled".
 @tf.function
 def train_step(images):
-    noise = tf.random.normal([BATCH_SIZE, LATENT_DIM])
+    noise = tf.random.normal([batch_size, latent_dim])
 
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
       generated_images = generator(noise, training=True)
@@ -242,19 +285,21 @@ def train(dataset, epochs):
       gen_loss, disc_loss = train_step(image_batch)
 
     # Produce images for the GIF as we go
-    display.clear_output(wait=True)
+    #display.clear_output(wait=False)
     generate_and_save_images(generator,
                              epoch + 1,
                              seed)
-
+    
     # Save the model every 15 epochs
-    if (epoch + 1) % 15 == 0:
-      checkpoint.save(file_prefix = checkpoint_prefix)
+    checkpoint.step.assign_add(1)
+    if int(checkpoint.step) % ckpt_epochs == 0:
+      save_path = manager.save()
+      print("Saved checkpoint for epoch {}: {}".format(int(checkpoint.step), save_path))
 
     print ('epoch {} : gen_loss {:01.4f} and disc_loss {:01.4f} and time {}'.format(epoch + 1, gen_loss, disc_loss, time.time()-start))
 
   # Generate after the final epoch
-  display.clear_output(wait=True)
+  #display.clear_output(wait=False)
   generate_and_save_images(generator,
                            epochs,
                            seed)
@@ -266,7 +311,7 @@ def generate_and_save_images(model, epoch, test_input):
   # Notice `training` is set to False.
   # This is so all layers run in inference mode (batchnorm).
   predictions = model(test_input, training=False)
-
+  predictions = tf.reshape(predictions, shape=(len(test_input), bins_per_octave, num_octaves, 1))
   fig = plt.figure(figsize=(image_shape[1]//4,image_shape[0]//4))
 
   for i in range(predictions.shape[0]):
@@ -275,7 +320,8 @@ def generate_and_save_images(model, epoch, test_input):
       plt.axis('off')
 
   plt.savefig(os.path.join(image_dir,'image_at_epoch_{:04d}.png'.format(epoch)))
-  plt.show()
+  plt.close()
+  #plt.show()
   
 # Train the model
 
@@ -287,7 +333,7 @@ def generate_and_save_images(model, epoch, test_input):
 # progresses, the generated digits will look increasingly real. After about 50 epochs, they 
 # resemble MNIST digits. This may take about one minute / epoch with the default settings on Colab.
   
-train(train_dataset, EPOCHS)
+train(train_dataset, epochs)
 
 print("Exiting...")
 end_time = time.time()
