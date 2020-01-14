@@ -62,7 +62,7 @@ train_buf = batch_size * 16
 max_to_keep = config['training'].getint('max_ckpts_to_keep')
 ckpt_epochs = config['training'].getint('checkpoint_epochs')
 continue_training = config['training'].getboolean('continue_training')
-learning_schedule = config['learning_schedule'].getboolean('learning_schedule')
+learning_schedule = config['training'].getboolean('learning_schedule')
 save_best_only = config['training'].getboolean('save_best_only')
 
 #Model configs
