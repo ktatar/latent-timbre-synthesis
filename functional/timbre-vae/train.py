@@ -14,7 +14,6 @@ import librosa
 import configparser
 import random
 import json
-
 #Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default ='./default.ini' , help='path to the config file')
@@ -40,7 +39,6 @@ n_iter=config['audio'].getint('n_iter')
 #dataset
 dataset = config['dataset'].get('datapath')
 cqt_dataset = config['dataset'].get('cqt_dataset')
-
 workspace = config['dataset'].get('workspace')
 dataset = config['dataset'].getint('run_number')
 
@@ -49,6 +47,7 @@ if not os.path.exists(dataset):
     sys.exit() 
 
 my_cqt = os.path.join(dataset, cqt_dataset)
+
 if not os.path.exists(my_cqt):
     parser.error("npy folder '%s' not found. Run create_dataset.py first. "%my_cqt)
     sys.exit() 
