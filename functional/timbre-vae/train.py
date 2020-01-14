@@ -42,6 +42,7 @@ dataset = config['dataset'].get('datapath')
 cqt_dataset = config['dataset'].get('cqt_dataset')
 
 workspace = config['dataset'].get('workspace')
+dataset = config['dataset'].getint('run_number')
 
 if not os.path.exists(dataset):
     parser.error("dataset folder '%s' not found"%dataset)
@@ -81,7 +82,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 #Create workspace
 
 if not continue_training:
-    run_id = 0
+    run_id = run_number
     while True:
         try:
             my_runs = os.path.join(dataset, desc)
