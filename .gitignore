@@ -1,0 +1,10 @@
+**.pyc
+**.ipynb_checkpoints
+**/test
+**.wav
+**.out
+**__pycache__
+**.png
+**ckpt*
+**.jpg
+**.jpeg
