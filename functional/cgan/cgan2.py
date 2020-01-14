@@ -89,7 +89,7 @@ for frame in training_array[2000:2010]:
     print(frame)
 
 
-training_array = training_array.reshape((training_array.shape[0], 48, 8, 1))
+training_array = training_array.reshape((training_array.shape[0], image_shape[0], image_shape[1], 1))
 
 print(training_array.shape)
 
@@ -285,7 +285,8 @@ def generate_and_save_images(model, epoch, test_input):
       plt.axis('off')
 
   plt.savefig(os.path.join(image_dir,'image_at_epoch_{:04d}.png'.format(epoch)))
-  plt.show()
+  plt.close()
+#  plt.show()
   
 # Train the model
 
@@ -296,7 +297,7 @@ def generate_and_save_images(model, epoch, test_input):
 # At the beginning of the training, the generated images look like random noise. As training 
 # progresses, the generated digits will look increasingly real. After about 50 epochs, they 
 # resemble MNIST digits. This may take about one minute / epoch with the default settings on Colab.
-  
+
 train(train_dataset, EPOCHS)
 
 print("Exiting...")
