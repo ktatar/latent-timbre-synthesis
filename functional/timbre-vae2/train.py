@@ -70,7 +70,7 @@ save_best_only = config['training'].getboolean('save_best_only')
 latent_dim = config['VAE'].getint('latent_dim')
 n_units = config['VAE'].getint('n_units')
 kl_beta = config['VAE'].getfloat('kl_beta')
-batch_normalization = config['VAE'].getboolean('batch_norm')
+batch_norm = config['VAE'].getboolean('batch_norm')
 VAE_output_activation = config['VAE'].get('output_activation')
 #etc
 desc = config['extra'].get('description')
