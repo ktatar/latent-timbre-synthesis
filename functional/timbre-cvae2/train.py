@@ -144,8 +144,6 @@ class Sampling(layers.Layer):
 original_dim = n_bins
 original_inputs = tf.keras.Input(shape=(original_dim,), name='encoder_input')
 x = layers.Dense(n_units, activation='relu')(original_inputs)
-if batch_norm:
-  x = layers.BatchNormalization()(x)
 x = layers.Dense(n_units/2, activation='relu')(x)
 z_mean = layers.Dense(latent_dim, name='z_mean')(x)
 z_log_var = layers.Dense(latent_dim, name='z_log_var')(x)
@@ -156,8 +154,6 @@ encoder.summary()
 # Define decoder model.
 latent_inputs = tf.keras.Input(shape=(latent_dim,), name='z_sampling')
 x = layers.Dense(n_units/2, activation='relu')(latent_inputs)
-if batch_norm:
-  x = layers.BatchNormalization()(x)
 x = layers.Dense(n_units, activation='relu')(x)
 outputs = layers.Dense(original_dim, activation=VAE_output_activation)(x)
 decoder = tf.keras.Model(inputs=latent_inputs, outputs=outputs, name='decoder')
