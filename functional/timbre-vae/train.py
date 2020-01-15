@@ -88,7 +88,6 @@ if not continue_training:
             my_runs = os.path.join(dataset, desc)
             workdir = os.path.join(my_runs, 'run-%03d' % (run_id)) 
             os.makedirs(workdir)
-            print(workdir)
 
             break
         except OSError:
@@ -100,6 +99,11 @@ if not continue_training:
     config['dataset']['workspace'] = workdir
 else:
     workdir = config['dataset'].get('workspace')
+
+print("Workspace: {}".format(workdir))
+print("saving initial configs...")
+with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
+  config.write(configfile)
 
 #create the dataset
 print('creating the dataset...')
@@ -120,7 +124,7 @@ print('Total number of CQT frames: {}'.format(len(training_array)))
 
 if buffer_size_dataset:
   train_buf = len(training_array)
-  
+
 #Define Sampling Layer
 class Sampling(layers.Layer):
   """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
@@ -165,7 +169,7 @@ model_dir = os.path.join(workdir, "model")
 
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(workdir,'mymodel_{epoch}.h5'),
+        filepath=os.path.join(model_dir,'mymodel_{epoch}.h5'),
         # Path where to save the model
         # The two parameters below mean that we will overwrite
         # the current checkpoint if and only if

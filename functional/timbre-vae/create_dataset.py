@@ -28,7 +28,7 @@ sample_rate = config['audio'].getint('sample_rate')
 hop_length = config['audio'].getint('hop_length')
 bins_per_octave = config['audio'].getint('bins_per_octave')
 num_octaves = config['audio'].getint('num_octaves')
-n_bins = 8 * bins_per_octave
+n_bins = num_octaves * bins_per_octave
 n_iter=config['audio'].getint('n_iter')
 
 #dataset
