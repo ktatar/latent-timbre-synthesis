@@ -58,7 +58,8 @@ my_audio = os.path.join(dataset, 'audio')
 epochs = config['training'].getint('epochs')
 learning_rate = config['training'].getfloat('learning_rate')
 batch_size = config['training'].getint('batch_size')
-train_buf = batch_size * 16
+train_buf = config['training'].getint('buffer_size')
+buffer_size_dataset = config['training'].getboolean('buffer_size_dataset')
 max_to_keep = config['training'].getint('max_ckpts_to_keep')
 ckpt_epochs = config['training'].getint('checkpoint_epochs')
 continue_training = config['training'].getboolean('continue_training')
@@ -117,6 +118,9 @@ for f in os.listdir(my_cqt):
 
 print('Total number of CQT frames: {}'.format(len(training_array)))
 
+if buffer_size_dataset:
+  train_buf = len(training_array)
+  
 #Define Sampling Layer
 class Sampling(layers.Layer):
   """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
