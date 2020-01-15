@@ -101,9 +101,6 @@ else:
     workdir = config['dataset'].get('workspace')
 
 print("Workspace: {}".format(workdir))
-print("saving initial configs...")
-with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
-  config.write(configfile)
 
 #create the dataset
 print('creating the dataset...')
@@ -120,7 +117,13 @@ for f in os.listdir(my_cqt):
         else:
             training_array = np.concatenate((training_array, new_array), axis=0)
 
-print('Total number of CQT frames: {}'.format(len(training_array)))
+total_cqt = len(training_array)
+print('Total number of CQT frames: {}'.format(total_cqt))
+config['dataset']['total_frames'] = total_cqt
+
+print("saving initial configs...")
+with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
+  config.write(configfile)
 
 if buffer_size_dataset:
   train_buf = len(training_array)
