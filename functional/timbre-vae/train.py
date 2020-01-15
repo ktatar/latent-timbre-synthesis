@@ -169,7 +169,7 @@ vae.add_loss(kl_loss)
 
 # Train
 model_dir = os.path.join(workdir, "model")
-
+os.makedirs(model_dir,exist_ok=True)
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(model_dir,'mymodel_{epoch}.h5'),
