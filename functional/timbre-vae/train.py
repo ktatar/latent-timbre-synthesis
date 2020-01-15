@@ -119,7 +119,7 @@ for f in os.listdir(my_cqt):
 
 total_cqt = len(training_array)
 print('Total number of CQT frames: {}'.format(total_cqt))
-config['dataset']['total_frames'] = total_cqt
+config['dataset']['total_frames'] = str(total_cqt)
 
 print("saving initial configs...")
 with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
