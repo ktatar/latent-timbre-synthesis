@@ -78,6 +78,9 @@ generator_activation = config['CGAN'].get('generator_activation')
 latent_dim = config['CGAN'].getint('latent_dim')
 
 #etc
+example_duration = config['extra'].getint('example_duration')
+example_smoothing = config['extra'].getint('example_smoothing')
+num_examples = config['extra'].getint('num_examples')
 desc = config['extra'].get('description')
 start_time = time.time()
 config['extra']['start'] = time.asctime( time.localtime(start_time) )
@@ -346,45 +349,14 @@ with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
 # Generate examples 
 print("Generating examples...")
 my_examples_folder = os.path.join(workdir, 'audio_examples')
-for f in os.listdir(my_audio):
-  print("Examples for {}".format(os.path.splitext(f)[0])) 
-  file_path = os.path.join(my_audio,f) 
-  my_file_duration = librosa.get_duration(filename=file_path)
-  my_offset = random.randint(0, int(my_file_duration)-30)
-  s, fs = librosa.load(file_path, duration=30, offset=my_offset, sr=None)
-  # Get the CQT magnitude
-  print("Calculating CQT")
-  C_complex = librosa.cqt(y=s, sr=fs, hop_length= hop_length, bins_per_octave=bins_per_octave, n_bins=n_bins)
-  C = np.abs(C_complex)
-  # Invert using Griffin-Lim
-  y_inv = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
-  # And invert without estimating phase
-  y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
-  y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave)
+for f in range(num_examples):
 
-  C_32 = C.astype('float32')
-  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
-  
-  ## Generate the same CQT using the model
-  my_array = np.transpose(C_32)
-  test_dataset = tf.data.Dataset.from_tensor_slices(my_array).batch(batch_size).prefetch(AUTOTUNE)
-  output = tf.constant(0., dtype='float32', shape=(1,n_bins))
-  print("Working on regenerating cqt magnitudes with the DL model")
-  for step, x_batch_train in enumerate(test_dataset):
-    reconstructed = generator(x_batch_train, training=False)
-    output = tf.concat([output, reconstructed], 0)
+  num_frames = int(np.rint(example_duration * sample_rate))
 
-  output_np = np.transpose(output.numpy())
-  output_inv_32 = librosa.griffinlim_cqt(output_np, 
-    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
-  output_inv_32_norm = librosa.util.normalize(output_inv_32)
-  
-  print("Saving audio files...")
-  my_audio_out_fold = os.path.join(my_examples_folder, os.path.splitext(f)[0])
-  os.makedirs(my_audio_out_fold,exist_ok=True)
-  librosa.output.write_wav(os.path.join(my_audio_out_fold,'original.wav'),
-                           s, fs)
-  librosa.output.write_wav(os.path.join(my_audio_out_fold,'original-icqt+gL.wav'),
-                           y_inv_32, fs)
-  librosa.output.write_wav(os.path.join(my_audio_out_fold,'VAE-output+gL.wav'),
-                           output_inv_32_norm, fs)
+  print('Generating latent vectors...')
+  shape = [num_frames, latent_dim] # [frame, image, channel, component]
+  all_latents = tf.random.normal(shape=shape,seed=None).numpy().astype(np.float32)
+  all_latents = scipy.ndimage.gaussian_filter(all_latents, [smoothing_sec * sample_rate] + [0, 0], mode='wrap')
+  all_latents /= np.sqrt(np.mean(np.square(all_latents)))
+
+  cqts = generator(all_latents, training=False)

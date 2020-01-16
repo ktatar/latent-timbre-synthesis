@@ -14,6 +14,8 @@ import librosa
 import configparser
 import random
 import json
+import pdb
+
 #Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default ='./default.ini' , help='path to the config file')
@@ -69,6 +71,8 @@ save_best_only = config['training'].getboolean('save_best_only')
 #Model configs
 latent_dim = config['VAE'].getint('latent_dim')
 n_units = config['VAE'].getint('n_units')
+n_units_divider = config['VAE'].getint('n_units_divider')
+num_layers = config['VAE'].getint('num_layers')
 kl_beta = config['VAE'].getfloat('kl_beta')
 batch_norm = config['VAE'].getboolean('batch_norm')
 VAE_output_activation = config['VAE'].get('output_activation')
@@ -139,14 +143,18 @@ class Sampling(layers.Layer):
     epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
     return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
+print("n_units_divider: {}".format(n_units_divider))
+print("num_layers: {}".format(num_layers))
 
 # Define encoder model.
 original_dim = n_bins
 original_inputs = tf.keras.Input(shape=(original_dim,), name='encoder_input')
 x = layers.Dense(n_units, activation='relu')(original_inputs)
-if batch_norm:
-  x = layers.BatchNormalization()(x)
-x = layers.Dense(n_units/2, activation='relu')(x)
+for i in range(num_layers):
+  x = layers.Dense(n_units// pow(2,((n_units_divider-1)*(i+1))) )(x)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)
+  x = layers.ReLU()(x)
 z_mean = layers.Dense(latent_dim, name='z_mean')(x)
 z_log_var = layers.Dense(latent_dim, name='z_log_var')(x)
 z = Sampling()((z_mean, z_log_var))
@@ -155,10 +163,12 @@ encoder.summary()
 
 # Define decoder model.
 latent_inputs = tf.keras.Input(shape=(latent_dim,), name='z_sampling')
-x = layers.Dense(n_units/2, activation='relu')(latent_inputs)
-if batch_norm:
-  x = layers.BatchNormalization()(x)
-x = layers.Dense(n_units, activation='relu')(x)
+x = layers.Dense(n_units// pow(2,((n_units_divider-1)*(num_layers))), activation='relu')(latent_inputs)
+for i in range(num_layers):
+  x = layers.Dense(n_units// pow(2,((n_units_divider-1)*(num_layers-(i+1)))) )(x)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)
+  x = layers.ReLU()(x)
 outputs = layers.Dense(original_dim, activation=VAE_output_activation)(x)
 decoder = tf.keras.Model(inputs=latent_inputs, outputs=outputs, name='decoder')
 decoder.summary()
@@ -196,7 +206,7 @@ if learning_schedule:
     decay_rate=0.96,
     staircase=True)
 
-
+pdb.set_trace()
 optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
 vae.compile(optimizer, 
