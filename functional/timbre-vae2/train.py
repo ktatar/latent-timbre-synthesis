@@ -14,7 +14,6 @@ import librosa
 import configparser
 import random
 import json
-import pdb
 
 #Parse arguments
 parser = argparse.ArgumentParser()
@@ -206,7 +205,6 @@ if learning_schedule:
     decay_rate=0.96,
     staircase=True)
 
-pdb.set_trace()
 optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
 vae.compile(optimizer, 
