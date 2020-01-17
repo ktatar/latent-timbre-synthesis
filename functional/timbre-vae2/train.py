@@ -76,6 +76,7 @@ kl_beta = config['VAE'].getfloat('kl_beta')
 batch_norm = config['VAE'].getboolean('batch_norm')
 VAE_output_activation = config['VAE'].get('output_activation')
 #etc
+normalize_examples = config_path['extra'].getboolean('normalize_examples')
 desc = config['extra'].get('description')
 start_time = time.time()
 config['extra']['start'] = time.asctime( time.localtime(start_time) )
@@ -258,8 +259,8 @@ for f in os.listdir(my_audio):
   output_np = np.transpose(output.numpy())
   output_inv_32 = librosa.griffinlim_cqt(output_np, 
     sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
-  output_inv_32_norm = librosa.util.normalize(output_inv_32)
-  
+  if normalize_examples:
+    output_inv_32 = librosa.util.normalize(output_inv_32)  
   print("Saving audio files...")
   my_audio_out_fold = os.path.join(my_examples_folder, os.path.splitext(f)[0])
   os.makedirs(my_audio_out_fold,exist_ok=True)
@@ -268,4 +269,4 @@ for f in os.listdir(my_audio):
   librosa.output.write_wav(os.path.join(my_audio_out_fold,'original-icqt+gL.wav'),
                            y_inv_32, fs)
   librosa.output.write_wav(os.path.join(my_audio_out_fold,'VAE-output+gL.wav'),
-                           output_inv_32_norm, fs)
+                           output_inv_32, fs)
