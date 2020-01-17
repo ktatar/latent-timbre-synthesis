@@ -74,7 +74,7 @@ batch_normalization = config['VAE'].getboolean('batch_norm')
 VAE_output_activation = config['VAE'].get('output_activation')
 #etc
 example_length = config['extra'].getint('example_length')
-normalize_examples = config_path['extra'].getboolean('normalize_examples')
+normalize_examples = config['extra'].getboolean('normalize_examples')
 desc = config['extra'].get('description')
 start_time = time.time()
 config['extra']['start'] = time.asctime( time.localtime(start_time) )
