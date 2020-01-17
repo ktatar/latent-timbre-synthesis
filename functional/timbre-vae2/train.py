@@ -188,7 +188,7 @@ os.makedirs(model_dir, exist_ok=True)
 
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(model_dir,'mymodel_{epoch}.h5'),
+        filepath=os.path.join(model_dir,'mymodel_last.h5'),
         # Path where to save the model
         # The two parameters below mean that we will overwrite
         # the current checkpoint if and only if
