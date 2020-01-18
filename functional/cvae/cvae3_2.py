@@ -53,10 +53,12 @@ kl_beta = config['VAE'].getfloat('kl_beta')
 
 # Load and prepare the dataset
 
-data_dir = "C:/Users/dbisig/.keras/datasets/celeba"
+#data_dir = "C:/Users/dbisig/.keras/datasets/celeba"
+data_dir = "C:/Users/dbisig/.keras/datasets/celeba2000"
 data_dir = pathlib.Path(data_dir)
 
-train_filenames_list = tf.data.Dataset.list_files(str(data_dir/'train60000/*'))
+train_filenames_list = tf.data.Dataset.list_files(str(data_dir/'train/*'))
+#train_filenames_list = tf.data.Dataset.list_files(str(data_dir/'train60000/*'))
 test_filenames_list = tf.data.Dataset.list_files(str(data_dir/'test/*'))
 
 IMG_WIDTH = 128
@@ -143,11 +145,10 @@ class Sampling(layers.Layer):
 
 # Define encoder model.
 input_img = layers.Input(shape=(IMG_WIDTH, IMG_HEIGHT, 3))
-x = layers.Conv2D(32, kernel_size, padding='same', activation='relu')(input_img)
+x = layers.Conv2D(32, kernel_size, padding='same', activation='relu', strides=(2, 2))(input_img)
 x = layers.Conv2D(64, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
 x = layers.Conv2D(128, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
 x = layers.Conv2D(256, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
-x = layers.Conv2D(512, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
 #x = layers.Conv2D(64, 3, padding='same', activation='relu')(x)
 # need to know the shape of the network here for the decoder
 shape_before_flattening = tf.keras.backend.int_shape(x)
@@ -155,7 +156,6 @@ shape_before_flattening = tf.keras.backend.int_shape(x)
 print(shape_before_flattening)
 
 x = layers.Flatten()(x)
-x = layers.Dense(dense_units, activation='relu')(x)
 # Two outputs, latent mean and (log)variance
 z_mean = layers.Dense(latent_dim)(x)
 z_log_sigma = layers.Dense(latent_dim)(x)
@@ -167,17 +167,15 @@ tf.keras.utils.plot_model(encoder, show_shapes=True, dpi=64)
 
 # Define decoder model.
 input_latent = tf.keras.Input(shape=(latent_dim), name='z_sampling')
-# Expand to 784 total pixels
-x = layers.Dense(dense_units, activation='relu')(input_latent)
-x = layers.Dense(np.prod(shape_before_flattening[1:]), activation='relu')(x)
+# Expand
+x = layers.Dense(np.prod(shape_before_flattening[1:]), activation='relu')(input_latent)
 # reshape
 x = layers.Reshape(shape_before_flattening[1:])(x)
 # use Conv2DTranspose to reverse the conv layers from the encoder
-x = layers.Conv2DTranspose(256, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
 x = layers.Conv2DTranspose(128, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
 x = layers.Conv2DTranspose(64, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
 x = layers.Conv2DTranspose(32, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
-output_img = layers.Conv2DTranspose(3, kernel_size, padding='same', activation='sigmoid')(x)
+output_img = layers.Conv2DTranspose(3, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
 
 decoder = tf.keras.Model(input_latent, output_img, name='decoder')
 decoder.summary()
@@ -189,6 +187,7 @@ decoder_output = decoder(z)
 # Define VAE model.
 vae = tf.keras.Model(input_img, [decoder_output, z_mean, z_log_sigma], name='vae')
 vae.summary()
+tf.keras.utils.plot_model(vae, show_shapes=True, dpi=64)
 
 
 def vae_loss(input_img, output_img, z_mean, z_log_sigma):
@@ -322,7 +321,7 @@ plt.title('test image')
 plt.imshow(sample_test_image[0])
 
 
-sample_train_image = sample_train_image[:1]
+sample_train_image = sample_train_imae[:1]
 vae_train_output, _, _ = vae(sample_train_image, training=False)
 vae_train_output = np.array(vae_train_output)
     
