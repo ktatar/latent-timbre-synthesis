@@ -256,7 +256,7 @@ def test_step(input_images):
     
     return loss
 
-def train(train_dataset, test_images, epochs):
+def train(train_dataset, test_dataset, epochs):
   for epoch in range(epochs):
     start = time.time()
 
@@ -272,20 +272,21 @@ def train(train_dataset, test_images, epochs):
       
       # Produce images for the GIF as we go
       display.clear_output(wait=True)
-      generate_and_save_images(vae, epoch + 1, test_images)
+      generate_and_save_images(vae, epoch + 1, test_dataset)
 
     print ('epoch {} : train loss {:01.4f} test loss {:01.4f} time {}'.format(epoch + 1, train_loss, test_loss, time.time()-start))
 
 
   # Generate after the final epoch
   display.clear_output(wait=True)
-  generate_and_save_images(vae, epochs, test_images)
+  generate_and_save_images(vae, epochs, test_dataset)
   
 image_dir = os.path.join(workdir,"images") 
 os.makedirs(image_dir, exist_ok=True)
 
-def generate_and_save_images(model, epoch, test_images):
+def generate_and_save_images(model, epoch, test_dataset):
     
+    test_images = next(iter(test_dataset))
     test_images = test_images[:num_examples_to_generate]
     predictions, _, _ = model(test_images, training=False)
     predictions = np.array(predictions)
@@ -300,36 +301,44 @@ def generate_and_save_images(model, epoch, test_images):
     plt.savefig(os.path.join(image_dir,'image_at_epoch_{:04d}.png'.format(epoch)))
     #plt.close()
     plt.show()
-    
-test_img = next(iter(test_images))
 
-train(train_images, test_img, epochs)
+train(train_images, test_images, epochs)
 
 # show vae output for single train and test image
 
 sample_train_image = next(iter(train_images))
 sample_test_image = next(iter(test_images))
 
+generate_and_save_images(vae, 11, test_images)
+
 print(sample_train_image.shape)
 print(sample_test_image.shape)
 
+plt.subplot(121)
 plt.title('train image')
-plt.imshow(sample_train_image[0])
+plt.imshow(sample_train_imae[0])
 
+plt.subplot(122)
 plt.title('test image')
 plt.imshow(sample_test_image[0])
+
 
 sample_train_image = sample_train_image[:1]
 vae_train_output, _, _ = vae(sample_train_image, training=False)
 vae_train_output = np.array(vae_train_output)
-plt.title("vae train output")
-plt.imshow(vae_train_output[0, :, :, :])
     
 sample_test_image = sample_test_image[:1]
 vae_test_output, _, _ = vae(sample_test_image, training=False)
 vae_test_output = np.array(vae_test_output)
-plt.title("vae test output")
-plt.imshow(vae_test_output[0, :, :, :])
+
+plt.subplot(121)
+plt.title('vae train image')
+plt.imshow(vae_train_output[0])
+
+plt.subplot(122)
+plt.title('vae test image')
+plt.imshow(vae_test_output[0])
+
 
 # show decoder output for single latent space vector
 xy = np.random.uniform(low=-1.0, high=1.0, size=latent_dim)
