@@ -14,6 +14,7 @@ import librosa
 import configparser
 import random
 import json
+
 #Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default ='./default.ini' , help='path to the config file')
@@ -67,14 +68,15 @@ learning_schedule = config['training'].getboolean('learning_schedule')
 save_best_only = config['training'].getboolean('save_best_only')
 
 #Model configs
-latent_dim = config['VAE'].getint('latent_dim')
-n_units = config['VAE'].getint('n_units')
-kl_beta = config['VAE'].getfloat('kl_beta')
-batch_normalization = config['VAE'].getboolean('batch_norm')
-VAE_output_activation = config['VAE'].get('output_activation')
+latent_dim = config['CVAE'].getint('latent_dim')
+n_units = config['CVAE'].getint('n_units')
+kernel_size = config['CVAE'].getint('kernel_size')
+kl_beta = config['CVAE'].getfloat('kl_beta')
+batch_norm = config['CVAE'].getboolean('batch_norm')
+output_activation = config['CVAE'].get('output_activation')
 #etc
 example_length = config['extra'].getint('example_length')
-normalize_examples = config_path['extra'].getboolean('normalize_examples')
+normalize_examples = config['extra'].getboolean('normalize_examples')
 desc = config['extra'].get('description')
 start_time = time.time()
 config['extra']['start'] = time.asctime( time.localtime(start_time) )
@@ -121,7 +123,7 @@ for f in os.listdir(my_cqt):
 
 total_cqt = len(training_array)
 print('Total number of CQT frames: {}'.format(total_cqt))
-config['dataset']['total_frames'] = total_cqt
+config['dataset']['total_frames'] = str(total_cqt)
 
 print("saving initial configs...")
 with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
@@ -141,12 +143,17 @@ class Sampling(layers.Layer):
     epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
     return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
-
 # Define encoder model.
 original_dim = n_bins
 original_inputs = tf.keras.Input(shape=(original_dim,), name='encoder_input')
-x = layers.Dense(n_units, activation='relu')(original_inputs)
-x = layers.Dense(n_units/2, activation='relu')(x)
+x = layers.Reshape((bins_per_octave//2, num_octaves*2, 1))(original_inputs)
+x = layers.Conv2D(32, kernel_size, padding='same', activation='relu')(x)
+x = layers.Conv2D(64, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+x = layers.Conv2D(128, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+# need to know the shape of the network here for the decoder
+shape_before_flattening = tf.keras.backend.int_shape(x)
+x = layers.Flatten()(x)
+x = layers.Dense(n_units, activation='relu')(x)
 z_mean = layers.Dense(latent_dim, name='z_mean')(x)
 z_log_var = layers.Dense(latent_dim, name='z_log_var')(x)
 z = Sampling()((z_mean, z_log_var))
@@ -155,9 +162,16 @@ encoder.summary()
 
 # Define decoder model.
 latent_inputs = tf.keras.Input(shape=(latent_dim,), name='z_sampling')
-x = layers.Dense(n_units/2, activation='relu')(latent_inputs)
-x = layers.Dense(n_units, activation='relu')(x)
-outputs = layers.Dense(original_dim, activation=VAE_output_activation)(x)
+x = layers.Dense(n_units, activation='relu')(latent_inputs)
+x = layers.Dense(np.prod(shape_before_flattening[1:]), activation='relu')(x)
+# reshape
+x = layers.Reshape(shape_before_flattening[1:])(x)
+# use Conv2DTranspose to reverse the conv layers from the encoder
+x = layers.Conv2DTranspose(64, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+x = layers.Conv2DTranspose(32, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+
+x = layers.Conv2DTranspose(1, kernel_size, padding='same', activation=output_activation)(x)
+outputs = layers.Flatten()(x)
 decoder = tf.keras.Model(inputs=latent_inputs, outputs=outputs, name='decoder')
 decoder.summary()
 
@@ -173,10 +187,11 @@ vae.add_loss(kl_loss)
 
 # Train
 model_dir = os.path.join(workdir, "model")
+os.makedirs(model_dir, exist_ok=True)
 
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(model_dir,'mymodel_{epoch}.h5'),
+        filepath=os.path.join(model_dir,'mymodel_last.h5'),
         # Path where to save the model
         # The two parameters below mean that we will overwrite
         # the current checkpoint if and only if
@@ -192,7 +207,6 @@ if learning_schedule:
     decay_steps=int(epochs*0.8),
     decay_rate=0.96,
     staircase=True)
-
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
