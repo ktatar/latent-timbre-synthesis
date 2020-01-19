@@ -271,14 +271,16 @@ def train(train_dataset, test_dataset, epochs):
       
       # Produce images for the GIF as we go
       display.clear_output(wait=True)
-      generate_and_save_images(vae, epoch + 1, test_dataset)
+      #generate_and_save_images(vae, epoch + 1, test_dataset)
+      generate_and_save_latent_interpolation(epoch)
 
     print ('epoch {} : train loss {:01.4f} test loss {:01.4f} time {}'.format(epoch + 1, train_loss, test_loss, time.time()-start))
 
 
   # Generate after the final epoch
   display.clear_output(wait=True)
-  generate_and_save_images(vae, epochs, test_dataset)
+  #generate_and_save_images(vae, epochs, test_dataset)
+  generate_and_save_latent_interpolation(epoch)
   
 image_dir = os.path.join(workdir,"images") 
 os.makedirs(image_dir, exist_ok=True)
@@ -300,8 +302,88 @@ def generate_and_save_images(model, epoch, test_dataset):
     plt.savefig(os.path.join(image_dir,'image_at_epoch_{:04d}.png'.format(epoch)))
     #plt.close()
     plt.show()
+    
+# latent space vector interpolation
+latent_space_samplecount = 10
+
+#sample_train_imae = next(iter(train_images))
+interpolation_images = sample_train_imae[2:6]
+
+fig = plt.figure(figsize=(2,2), dpi = 300)
+plt.subplot(2, 2, 1)
+plt.imshow(interpolation_images[0])
+plt.axis('off')
+plt.subplot(2, 2, 2)
+plt.imshow(interpolation_images[1])
+plt.axis('off')
+plt.subplot(2, 2, 3)
+plt.imshow(interpolation_images[2])
+plt.axis('off')
+plt.subplot(2, 2, 4)
+plt.imshow(interpolation_images[3])
+plt.axis('off')
+plt.savefig(os.path.join(image_dir,'orig_target_images.png'))
+plt.show()
+
+def generate_and_save_latent_interpolation(epoch):
+    latent_interpolation_targets = encoder(interpolation_images)
+    latent_interpolation_targets = np.array(latent_interpolation_targets)
+    latent_interpolation_targets = np.reshape(latent_interpolation_targets, (2, 2, latent_dim))
+
+    predictions, _, _ = vae(interpolation_images, training=False)
+    predictions = np.array(predictions)
+
+    fig = plt.figure(figsize=(2,2), dpi = 300)
+    plt.subplot(221)
+    plt.imshow(predictions[0,:,:,:])
+    plt.axis('off')
+    plt.subplot(222)
+    plt.imshow(predictions[1,:,:,:])
+    plt.axis('off')
+    plt.subplot(223)
+    plt.imshow(predictions[2,:,:,:])
+    plt.axis('off')
+    plt.subplot(224)
+    plt.imshow(predictions[3,:,:,:])
+    plt.axis('off')
+    plt.savefig(os.path.join(image_dir,'target_images_at_epoch_{:04d}.png'.format(epoch)))
+    plt.show()
+    
+    latent_sampling_grid = np.empty((latent_space_samplecount, latent_space_samplecount, latent_dim))
+
+    fig = plt.figure(figsize=(latent_space_samplecount,latent_space_samplecount), dpi = 300)
+
+    for gy in range(latent_space_samplecount):
+    
+        lsy = 1.0 / (latent_space_samplecount - 1) * gy
+    
+        for gx in range(latent_space_samplecount):
+        
+            lsx = 1.0 / (latent_space_samplecount - 1) * gx
+        
+            lt00 = latent_interpolation_targets[0][0]
+            lt10 = latent_interpolation_targets[1][0]
+            lt01 = latent_interpolation_targets[0][1]
+            lt11 = latent_interpolation_targets[1][1]
+
+            ltx0 =  lt00 + (lt10 - lt00) * lsx
+            ltx1 =  lt01 + (lt11 - lt01) * lsx
+            lt = ltx0 + (ltx1 - ltx0) * lsy
+                 
+            lt = np.reshape(lt, (1, latent_dim))
+            prediction = decoder(lt)
+                
+            plt.subplot(latent_space_samplecount, latent_space_samplecount, gy * latent_space_samplecount + gx + 1)
+            plt.imshow(prediction[0, :, :, :])
+            plt.axis('off')
+
+    plt.savefig(os.path.join(image_dir,'target_interpolation_at_epoch_{:04d}.png'.format(epoch)))
+    plt.show()
+    
+    
 
 train(train_images, test_images, epochs)
+
 
 # show vae output for single train and test image
 
