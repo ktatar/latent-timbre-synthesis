@@ -176,13 +176,21 @@ model_dir = os.path.join(workdir, "model")
 os.makedirs(model_dir,exist_ok=True)
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(model_dir,'mymodel_{epoch}.h5'),
+        filepath=os.path.join(model_dir,'mymodel_last.h5'),
         # Path where to save the model
         # The two parameters below mean that we will overwrite
         # the current checkpoint if and only if
         # the `val_loss` score has improved.
         save_best_only=save_best_only,
         monitor='loss',
+        verbose=1),        
+    tf.keras.callbacks.EarlyStopping(
+        # Stop training when `val_loss` is no longer improving
+        monitor='loss',
+        # "no longer improving" being defined as "no better than 1e-2 less"
+        min_delta=1e-5,
+        # "no longer improving" being further defined as "for at least 2 epochs"
+        patience=20,
         verbose=1)
 ]
 

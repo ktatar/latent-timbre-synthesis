@@ -198,6 +198,14 @@ callbacks = [
         # the `val_loss` score has improved.
         save_best_only=save_best_only,
         monitor='loss',
+        verbose=1),
+    tf.keras.callbacks.EarlyStopping(
+        # Stop training when `val_loss` is no longer improving
+        monitor='loss',
+        # "no longer improving" being defined as "no better than 1e-2 less"
+        min_delta=1e-5,
+        # "no longer improving" being further defined as "for at least 2 epochs"
+        patience=20,
         verbose=1)
 ]
 
