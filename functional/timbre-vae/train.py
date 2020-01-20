@@ -14,6 +14,8 @@ import librosa
 import configparser
 import random
 import json
+import matplotlib.pyplot as plt
+
 #Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default ='./default.ini' , help='path to the config file')
@@ -256,3 +258,10 @@ for f in os.listdir(my_audio):
                            y_inv_32, fs)
   librosa.output.write_wav(os.path.join(my_audio_out_fold,'VAE-output+gL.wav'),
                            output_inv_32, fs)
+#Generate a plot for loss 
+history_dict = history.history
+fig = plt.figure()
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.plot(history_dict['loss'])
+fig.savefig(os.path.join(workdir,'my_history_plot.jpg'), dpi=300)
