@@ -67,8 +67,8 @@ ckpt_epochs = config['training'].getint('checkpoint_epochs')
 continue_training = config['training'].getboolean('continue_training')
 learning_schedule = config['training'].getboolean('learning_schedule')
 save_best_only = config['training'].getboolean('save_best_only')
-early_patience_epoch = config['training'].getboolean('early_patience_epoch')
-early_delta = config['training'].getboolean('early_delta')
+early_patience_epoch = config['training'].getint('early_patience_epoch')
+early_delta = config['training'].getfloat('early_delta')
 
 #Model configs
 latent_dim = config['CVAE'].getint('latent_dim')
