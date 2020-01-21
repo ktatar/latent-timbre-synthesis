@@ -67,6 +67,8 @@ ckpt_epochs = config['training'].getint('checkpoint_epochs')
 continue_training = config['training'].getboolean('continue_training')
 learning_schedule = config['training'].getboolean('learning_schedule')
 save_best_only = config['training'].getboolean('save_best_only')
+early_patience_epoch = config['training'].getboolean('early_patience_epoch')
+early_delta = config['training'].getboolean('early_delta')
 
 #Model configs
 latent_dim = config['CVAE'].getint('latent_dim')
@@ -78,6 +80,7 @@ output_activation = config['CVAE'].get('output_activation')
 #etc
 example_length = config['extra'].getint('example_length')
 normalize_examples = config['extra'].getboolean('normalize_examples')
+plot_model = config['extra'].getboolean('plot_model')
 desc = config['extra'].get('description')
 start_time = time.time()
 config['extra']['start'] = time.asctime( time.localtime(start_time) )
@@ -181,6 +184,37 @@ outputs = decoder(z)
 vae = tf.keras.Model(inputs=original_inputs, outputs=outputs, name='vae')
 vae.summary()
 
+if plot_model:
+  tf.keras.utils.plot_model(
+    vae,
+    to_file=os.path.join(workdir,'model_vae.jpg'),
+    show_shapes=True,
+    show_layer_names=True,
+    rankdir='TB',
+    expand_nested=True,
+    dpi=300
+  )
+
+  tf.keras.utils.plot_model(
+      encoder,
+      to_file=os.path.join(workdir,'model_encoder.jpg'),
+      show_shapes=True,
+      show_layer_names=True,
+      rankdir='TB',
+      expand_nested=True,
+      dpi=300
+  )
+
+  tf.keras.utils.plot_model(
+      decoder,
+      to_file=os.path.join(workdir,'model_decoder.jpg'),
+      show_shapes=True,
+      show_layer_names=True,
+      rankdir='TB',
+      expand_nested=True,
+      dpi=300
+  )
+
 # Add KL divergence regularization loss.
 kl_loss = - kl_beta * tf.reduce_mean(
     z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1)
@@ -199,6 +233,14 @@ callbacks = [
         # the `val_loss` score has improved.
         save_best_only=save_best_only,
         monitor='loss',
+        verbose=1),
+    tf.keras.callbacks.EarlyStopping(
+        # Stop training when `val_loss` is no longer improving
+        monitor='loss',
+        # "no longer improving" being defined as "no better than 1e-2 less"
+        min_delta=early_delta,
+        # "no longer improving" being further defined as "for at least 2 epochs"
+        patience=early_patience_epoch,
         verbose=1)
 ]
 
@@ -213,6 +255,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
 vae.compile(optimizer, 
   loss=tf.keras.losses.MeanSquaredError())
+
 history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks)
 
 print('\nhistory dict:', history.history)
