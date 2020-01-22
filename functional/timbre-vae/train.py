@@ -306,9 +306,12 @@ for f in os.listdir(my_audio):
   librosa.output.write_wav(os.path.join(my_audio_out_fold,'VAE-output+gL.wav'),
                            output_inv_32, fs)
 #Generate a plot for loss 
+print("Generating loss plot...")
 history_dict = history.history
 fig = plt.figure()
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.plot(history_dict['loss'])
 fig.savefig(os.path.join(workdir,'my_history_plot.jpg'), dpi=300)
+
+print('bye...')
