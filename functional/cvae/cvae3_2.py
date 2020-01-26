@@ -35,7 +35,7 @@ except FileNotFoundError:
 datapath = config['dataset'].get('datapath')
 dataset_name = config['dataset'].get('cqt_dataset')
 dataset_path = os.path.join(datapath, dataset_name)
-os.makedirs(dataset_path,exist_ok=True)
+#os.makedirs(dataset_path,exist_ok=True)
 workdir = config['dataset'].get('workspace')
 
 #Training configs
@@ -54,12 +54,12 @@ kl_beta = config['VAE'].getfloat('kl_beta')
 # Load and prepare the dataset
 
 #data_dir = "C:/Users/dbisig/.keras/datasets/celeba"
-data_dir = "C:/Users/dbisig/.keras/datasets/celeba2000"
+data_dir = "D:/my_workspace/dataset/tatar-istanbul-bundle-640/images"
 data_dir = pathlib.Path(data_dir)
 
-train_filenames_list = tf.data.Dataset.list_files(str(data_dir/'train/*'))
+train_filenames_list = tf.data.Dataset.list_files(str(data_dir))
 #train_filenames_list = tf.data.Dataset.list_files(str(data_dir/'train60000/*'))
-test_filenames_list = tf.data.Dataset.list_files(str(data_dir/'test/*'))
+test_filenames_list = tf.data.Dataset.list_files(str(data_dir))
 
 IMG_WIDTH = 128
 IMG_HEIGHT = 128
@@ -119,18 +119,6 @@ train_images = train_images.map(
 test_images = test_images.map(
     preprocess_image_test, num_parallel_calls=AUTOTUNE).cache().shuffle(
     buffer_size).batch(batch_size)
-
-sample_train_imae = next(iter(train_images))
-sample_test_image = next(iter(test_images))
-
-plt.subplot(121)
-plt.title('train image')
-plt.imshow(sample_train_imae[0])
-
-plt.subplot(122)
-plt.title('test image')
-plt.imshow(sample_test_image[0])
-
 
 #Define Sampling Layer
 class Sampling(layers.Layer):
@@ -306,8 +294,8 @@ def generate_and_save_images(model, epoch, test_dataset):
 # latent space vector interpolation
 latent_space_samplecount = 10
 
-#sample_train_imae = next(iter(train_images))
-interpolation_images = sample_train_imae[2:6]
+sample_train_image = next(iter(train_images))
+interpolation_images = sample_train_image[2:6]
 
 fig = plt.figure(figsize=(2,2), dpi = 300)
 plt.subplot(2, 2, 1)

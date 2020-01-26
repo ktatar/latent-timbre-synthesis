@@ -325,6 +325,7 @@ history_dict = history.history
 fig = plt.figure()
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
+plt.ylim(0.,0.5)
 plt.plot(history_dict['loss'])
 fig.savefig(os.path.join(workdir,'my_history_plot.jpg'), dpi=300)
 
