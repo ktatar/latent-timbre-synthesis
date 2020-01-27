@@ -224,24 +224,30 @@ vae.add_loss(kl_loss)
 model_dir = os.path.join(workdir, "model")
 os.makedirs(model_dir, exist_ok=True)
 
+log_dir = os.join.path(workdir, 'logs')
+os.makedirs(log_dir, exist_ok=True)
+
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(model_dir,'mymodel_last.h5'),
-        # Path where to save the model
-        # The two parameters below mean that we will overwrite
-        # the current checkpoint if and only if
-        # the `val_loss` score has improved.
-        save_best_only=save_best_only,
-        monitor='loss',
-        verbose=1),
+      filepath=os.path.join(model_dir,'mymodel_last.h5'),
+      # Path where to save the model
+      # The two parameters below mean that we will overwrite
+      # the current checkpoint if and only if
+      # the `val_loss` score has improved.
+      save_best_only=save_best_only,
+      monitor='loss',
+      verbose=1),
     tf.keras.callbacks.EarlyStopping(
-        # Stop training when `val_loss` is no longer improving
-        monitor='loss',
-        # "no longer improving" being defined as "no better than 1e-2 less"
-        min_delta=early_delta,
-        # "no longer improving" being further defined as "for at least 2 epochs"
-        patience=early_patience_epoch,
-        verbose=1)
+      # Stop training when `val_loss` is no longer improving
+      monitor='loss',
+      # "no longer improving" being defined as "no better than 1e-2 less"
+      min_delta=early_delta,
+      # "no longer improving" being further defined as "for at least 2 epochs"
+      patience=early_patience_epoch,
+      verbose=1),
+    tf.keras.callbacks.Tensorboard(
+      log_dir=log_dir, 
+      histogram_freq=1)
 ]
 
 if learning_schedule:
@@ -323,7 +329,8 @@ history_dict = history.history
 fig = plt.figure()
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
+plt.ylim(0.,0.01)
 plt.plot(history_dict['loss'])
-fig.savefig(os.path.join(workdir,'my_history_plot.jpg'), dpi=300)
+fig.savefig(os.path.join(workdir,'my_history_plot.pdf'), dpi=300)
 
 print('bye...')
