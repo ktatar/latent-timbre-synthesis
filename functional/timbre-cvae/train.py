@@ -245,7 +245,7 @@ callbacks = [
       # "no longer improving" being further defined as "for at least 2 epochs"
       patience=early_patience_epoch,
       verbose=1),
-    tf.keras.callbacks.Tensorboard(
+    tf.keras.callbacks.TensorBoard(
       log_dir=log_dir, 
       histogram_freq=1)
 ]
