@@ -224,7 +224,7 @@ vae.add_loss(kl_loss)
 model_dir = os.path.join(workdir, "model")
 os.makedirs(model_dir, exist_ok=True)
 
-log_dir = os.join.path(workdir, 'logs')
+log_dir = os.path.join(workdir, 'logs')
 os.makedirs(log_dir, exist_ok=True)
 
 callbacks = [

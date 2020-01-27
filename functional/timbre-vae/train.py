@@ -211,7 +211,7 @@ vae.add_loss(kl_loss)
 model_dir = os.path.join(workdir, "model")
 os.makedirs(model_dir,exist_ok=True)
 
-log_dir = os.join.path(workdir, 'logs')
+log_dir = os.path.join(workdir, 'logs')
 os.makedirs(log_dir, exist_ok=True)
 
 if learning_schedule:
@@ -245,7 +245,7 @@ callbacks = [
       # "no longer improving" being further defined as "for at least 2 epochs"
       patience=early_patience_epoch,
       verbose=1),
-    tf.keras.callbacks.Tensorboard(
+    tf.keras.callbacks.TensorBoard(
       log_dir=log_dir, 
       histogram_freq=1)
 ]
