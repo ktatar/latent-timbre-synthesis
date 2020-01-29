@@ -264,7 +264,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 vae.compile(optimizer, 
   loss=tf.keras.losses.MeanSquaredError())
 
-history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks)
+history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks, verbose=2)
 
 print('\nhistory dict:', history.history)
 

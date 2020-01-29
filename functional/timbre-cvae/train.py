@@ -72,11 +72,19 @@ early_delta = config['training'].getfloat('early_delta')
 
 #Model configs
 latent_dim = config['CVAE'].getint('latent_dim')
-n_units = config['CVAE'].getint('n_units')
+
+num_dense_layers = config['CVAE'].getint('num_dense_layers')
+dense_units = config['CVAE'].getint('dense_units')
+dense_unit_divider = config['CVAE'].getint('dense_unit_divider')
+
+num_conv_layers = config['CVAE'].getint('num_conv_layers')
+initial_filters = config['CVAE'].getint('num_inital_filters')
 kernel_size = config['CVAE'].getint('kernel_size')
+
 kl_beta = config['CVAE'].getfloat('kl_beta')
 batch_norm = config['CVAE'].getboolean('batch_norm')
 output_activation = config['CVAE'].get('output_activation')
+
 #etc
 example_length = config['extra'].getint('example_length')
 normalize_examples = config['extra'].getboolean('normalize_examples')
@@ -151,13 +159,22 @@ class Sampling(layers.Layer):
 original_dim = n_bins
 original_inputs = tf.keras.Input(shape=(original_dim,), name='encoder_input')
 x = layers.Reshape((bins_per_octave//2, num_octaves*2, 1))(original_inputs)
-x = layers.Conv2D(32, kernel_size, padding='same', activation='relu')(x)
-x = layers.Conv2D(64, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
-x = layers.Conv2D(128, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+x = layers.Conv2D(initial_filters, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+if num_conv_layers>0:
+  for i in range(num_conv_layers):
+    x = layers.Conv2D(initial_filters*pow(2,(i+1)), kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+
 # need to know the shape of the network here for the decoder
 shape_before_flattening = tf.keras.backend.int_shape(x)
+
+print("Shape before flattening: {}".format(shape_before_flattening))
+
 x = layers.Flatten()(x)
-x = layers.Dense(n_units, activation='relu')(x)
+if num_dense_layers > 0:
+  for i in range(num_dense_layers):
+    x = layers.Dense(dense_units//pow(dense_unit_divider,i), activation='relu')(x)
+
+# Two outputs, latent mean and (log)variance
 z_mean = layers.Dense(latent_dim, name='z_mean')(x)
 z_log_var = layers.Dense(latent_dim, name='z_log_var')(x)
 z = Sampling()((z_mean, z_log_var))
@@ -166,15 +183,23 @@ encoder.summary()
 
 # Define decoder model.
 latent_inputs = tf.keras.Input(shape=(latent_dim,), name='z_sampling')
-x = layers.Dense(n_units, activation='relu')(latent_inputs)
-x = layers.Dense(np.prod(shape_before_flattening[1:]), activation='relu')(x)
+# Expand
+if num_dense_layers>0:
+  x = layers.Dense(dense_units//pow(dense_unit_divider,num_dense_layers-1))(latent_inputs)
+  if num_dense_layers>1:
+    for i in range(num_dense_layers-1):
+      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)), activation='relu')(x)
+  x = layers.Dense(np.prod(shape_before_flattening[1:]), activation='relu')(x)
+else:
+  x = layers.Dense(np.prod(shape_before_flattening[1:]))(latent_inputs)
 # reshape
 x = layers.Reshape(shape_before_flattening[1:])(x)
 # use Conv2DTranspose to reverse the conv layers from the encoder
-x = layers.Conv2DTranspose(64, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
-x = layers.Conv2DTranspose(32, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+if num_conv_layers>0:
+  for i in range(num_conv_layers):
+    x = layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+x = layers.Conv2DTranspose(1, kernel_size, padding='same', strides=(2, 2))(x)
 
-x = layers.Conv2DTranspose(1, kernel_size, padding='same', activation=output_activation)(x)
 outputs = layers.Flatten()(x)
 decoder = tf.keras.Model(inputs=latent_inputs, outputs=outputs, name='decoder')
 decoder.summary()
@@ -262,7 +287,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 vae.compile(optimizer, 
   loss=tf.keras.losses.MeanSquaredError())
 
-history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks)
+history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks, verbose=2)
 
 print('\nhistory dict:', history.history)
 
