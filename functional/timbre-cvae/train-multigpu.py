@@ -93,7 +93,7 @@ desc = config['extra'].get('description')
 start_time = time.time()
 config['extra']['start'] = time.asctime( time.localtime(start_time) )
 
-AUTOTUNE = tf.data.experimental.AUTOTUNE
+#AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 #Create workspace
 
@@ -294,7 +294,11 @@ with strategy.scope():
   vae.compile(optimizer, 
     loss=tf.keras.losses.MeanSquaredError())
 
-history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks)
+#Create dataset
+train_dataset = tf.data.Dataset.from_tensor_slices((training_array, training_array)).cache().shuffle(train_buf).batch(batch_size) 
+
+
+history = vae.fit(train_dataset, epochs=epochs, callbacks=callbacks)
 
 print('\nhistory dict:', history.history)
 
