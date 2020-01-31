@@ -172,8 +172,10 @@ print("Shape before flattening: {}".format(shape_before_flattening))
 x = layers.Flatten()(x)
 if num_dense_layers > 0:
   for i in range(num_dense_layers):
-    x = layers.Dense(dense_units//pow(dense_unit_divider,i), activation='relu')(x)
-
+    x = layers.Dense(dense_units//pow(dense_unit_divider,i))(x)
+    if batch_norm:
+      x = layers.BatchNormalization()(x)  
+    x = layers.ReLU()(x)
 # Two outputs, latent mean and (log)variance
 z_mean = layers.Dense(latent_dim, name='z_mean')(x)
 z_log_var = layers.Dense(latent_dim, name='z_log_var')(x)
@@ -186,12 +188,22 @@ latent_inputs = tf.keras.Input(shape=(latent_dim,), name='z_sampling')
 # Expand
 if num_dense_layers>0:
   x = layers.Dense(dense_units//pow(dense_unit_divider,num_dense_layers-1))(latent_inputs)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)
   if num_dense_layers>1:
     for i in range(num_dense_layers-1):
-      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)), activation='relu')(x)
-  x = layers.Dense(np.prod(shape_before_flattening[1:]), activation='relu')(x)
+      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)))(x)
+      if batch_norm:
+        x = layers.BatchNormalization()(x)
+      x = layers.ReLU()(x)
+  x = layers.Dense(np.prod(shape_before_flattening[1:]))(x)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)  
+  x = layers.ReLU()(x)
 else:
   x = layers.Dense(np.prod(shape_before_flattening[1:]))(latent_inputs)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)  
 # reshape
 x = layers.Reshape(shape_before_flattening[1:])(x)
 # use Conv2DTranspose to reverse the conv layers from the encoder
