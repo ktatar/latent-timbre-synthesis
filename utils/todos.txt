@@ -1,0 +1,7 @@
+MNIST examples : reconstruction & latent space visuals & loss function
+
+
+two different kl values 0.5 vs 0.00005
+low kl with scheduler start low increase to high 
+
+
