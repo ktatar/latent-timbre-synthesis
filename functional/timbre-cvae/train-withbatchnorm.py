@@ -45,16 +45,14 @@ workspace = config['dataset'].get('workspace')
 run_number = config['dataset'].getint('run_number')
 
 if not os.path.exists(dataset):
-    raise FileNotFoundError:
-      print('Dataset File Not Found at {}'.format(dataset))
-      sys.exit() 
+    parser.error("dataset folder '%s' not found"%dataset)
+    sys.exit() 
 
 my_cqt = os.path.join(dataset, cqt_dataset)
 
 if not os.path.exists(my_cqt):
-    raise FileNotFoundError:
-      print('CQT matrixes File Not Found at {}'.format(my_cqt))
-      sys.exit() 
+    parser.error("npy folder '%s' not found. Run create_dataset.py first. "%my_cqt)
+    sys.exit() 
 
 my_audio = os.path.join(dataset, 'audio')
     
@@ -174,8 +172,10 @@ print("Shape before flattening: {}".format(shape_before_flattening))
 x = layers.Flatten()(x)
 if num_dense_layers > 0:
   for i in range(num_dense_layers):
-    x = layers.Dense(dense_units//pow(dense_unit_divider,i), activation='relu')(x)
-
+    x = layers.Dense(dense_units//pow(dense_unit_divider,i))(x)
+    if batch_norm:
+      x = layers.BatchNormalization()(x)  
+    x = layers.ReLU()(x)
 # Two outputs, latent mean and (log)variance
 z_mean = layers.Dense(latent_dim, name='z_mean')(x)
 z_log_var = layers.Dense(latent_dim, name='z_log_var')(x)
@@ -188,12 +188,22 @@ latent_inputs = tf.keras.Input(shape=(latent_dim,), name='z_sampling')
 # Expand
 if num_dense_layers>0:
   x = layers.Dense(dense_units//pow(dense_unit_divider,num_dense_layers-1))(latent_inputs)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)
   if num_dense_layers>1:
     for i in range(num_dense_layers-1):
-      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)), activation='relu')(x)
-  x = layers.Dense(np.prod(shape_before_flattening[1:]), activation='relu')(x)
+      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)))(x)
+      if batch_norm:
+        x = layers.BatchNormalization()(x)
+      x = layers.ReLU()(x)
+  x = layers.Dense(np.prod(shape_before_flattening[1:]))(x)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)  
+  x = layers.ReLU()(x)
 else:
   x = layers.Dense(np.prod(shape_before_flattening[1:]))(latent_inputs)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)  
 # reshape
 x = layers.Reshape(shape_before_flattening[1:])(x)
 # use Conv2DTranspose to reverse the conv layers from the encoder
@@ -320,11 +330,11 @@ for f in os.listdir(my_audio):
   # Invert using Griffin-Lim
   y_inv = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
   # And invert without estimating phase
-  #y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
-  #y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave)
+  y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
+  y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave)
 
   C_32 = C.astype('float32')
-  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
   
   ## Generate the same CQT using the model
   my_array = np.transpose(C_32)
@@ -336,8 +346,8 @@ for f in os.listdir(my_audio):
     output = tf.concat([output, reconstructed], 0)
 
   output_np = np.transpose(output.numpy())
-  output_inv_32 = librosa.griffinlim_cqt(output_np[1:], 
-    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+  output_inv_32 = librosa.griffinlim_cqt(output_np, 
+    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
   if normalize_examples:
     output_inv_32 = librosa.util.normalize(output_inv_32)  
   print("Saving audio files...")
