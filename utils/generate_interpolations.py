@@ -182,7 +182,7 @@ my_alfas = np.arange(0.1,1,0.1)
 
 for i in range(len(my_alfas)):
     alfa = my_alfas[i]
-    print('Working on alfa {}'.format(alfa))
+    print('Working on alfa {:2.1f}'.format(alfa))
     #generate mixed latent vectors
     latent_mix_mean = tf.math.add(
         tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_1_latent_vecs_mean), 
@@ -293,7 +293,7 @@ for my_idx in range(num_random_interpolations):
 
     for i in range(len(my_alfas)):
         alfa = my_alfas[i]
-        print('Working on alfa {2.1f}'.format(alfa))
+        print('Working on alfa {:2.1f}'.format(alfa))
         #generate mixed latent vectors
         latent_mix_mean = tf.math.add(
             tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_1_latent_vecs_mean), 
