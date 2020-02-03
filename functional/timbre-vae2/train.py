@@ -45,14 +45,12 @@ workspace = config['dataset'].get('workspace')
 run_number = config['dataset'].getint('run_number')
 
 if not os.path.exists(dataset):
-    parser.error("dataset folder '%s' not found"%dataset)
-    sys.exit() 
+    raise FileNotFoundError
 
 my_cqt = os.path.join(dataset, cqt_dataset)
 
 if not os.path.exists(my_cqt):
-    parser.error("npy folder '%s' not found. Run create_dataset.py first. "%my_cqt)
-    sys.exit() 
+    raise FileNotFoundError
 
 my_audio = os.path.join(dataset, 'audio')
     
@@ -289,17 +287,18 @@ for f in os.listdir(my_audio):
   my_offset = random.randint(0, int(my_file_duration)-example_length)
   s, fs = librosa.load(file_path, duration=example_length, offset=my_offset, sr=None)
   # Get the CQT magnitude
-  print("Calculating CQT")
-  C_complex = librosa.cqt(y=s, sr=fs, hop_length= hop_length, bins_per_octave=bins_per_octave, n_bins=n_bins)
-  C = np.abs(C_complex)
+  cqt_audio = np.load(os.path.join(my_cqt,os.path.splitext(audio_1)[0]+'.npy'))
+  my_offset_frames = librosa.time_to_samples(my_offset, sr=sample_rate)//hop_length
+  duration_frames = librosa.time_to_samples(my_offset, sr=sample_rate)//hop_length
+  C = cqt_audio[my_offset_frames:(audio_1_offset_frames+duration_frames)]
   # Invert using Griffin-Lim
   y_inv = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
   # And invert without estimating phase
-  y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
-  y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave)
+  #y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
+  #y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave)
 
   C_32 = C.astype('float32')
-  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
+  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
   
   ## Generate the same CQT using the model
   my_array = np.transpose(C_32)
@@ -311,8 +310,8 @@ for f in os.listdir(my_audio):
     output = tf.concat([output, reconstructed], 0)
 
   output_np = np.transpose(output.numpy())
-  output_inv_32 = librosa.griffinlim_cqt(output_np, 
-    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
+  output_inv_32 = librosa.griffinlim_cqt(output_np[1:], 
+    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
   if normalize_examples:
     output_inv_32 = librosa.util.normalize(output_inv_32)  
   print("Saving audio files...")

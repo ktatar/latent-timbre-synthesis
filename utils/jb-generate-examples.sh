@@ -17,5 +17,3 @@ sleep 5
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$EBROOTCUDA/lib64:$EBROOTCUDNN/lib64
 
 python generate_examples.py --dir /home/ktatar/scratch/datasets/Electroacoustic-Roads/func-timbre-vae2-cedar/run-029
-wait
-python generate_examples.py --dir /home/ktatar/scratch/datasets/Electroacoustic-Roads/func-timbre-vae2-cedar/run-030 
