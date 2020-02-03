@@ -45,16 +45,12 @@ workspace = config['dataset'].get('workspace')
 run_number = config['dataset'].getint('run_number')
 
 if not os.path.exists(dataset):
-    raise FileNotFoundError:
-      print('Dataset File Not Found at {}'.format(dataset))
-      sys.exit() 
-
+    raise FileNotFoundError
+    
 my_cqt = os.path.join(dataset, cqt_dataset)
 
 if not os.path.exists(my_cqt):
-    raise FileNotFoundError:
-      print('CQT matrixes File Not Found at {}'.format(my_cqt))
-      sys.exit() 
+    raise FileNotFoundError
 
 my_audio = os.path.join(dataset, 'audio')
     
