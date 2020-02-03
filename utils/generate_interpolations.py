@@ -185,11 +185,11 @@ for i in range(len(my_alfas)):
     print('Working on alfa {}'.format(alfa))
     #generate mixed latent vectors
     latent_mix_mean = tf.math.add(
-            tf.math.multiply((1-alfa), audio_1_latent_vecs_mean), 
-            tf.math.multiply(alfa, audio_2_latent_vecs_mean))
+        tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_1_latent_vecs_mean), 
+        tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_mean))
     latent_mix_log_var = tf.math.add(
-            tf.math.multiply((1-alfa),audio_1_latent_vecs_log_var), 
-            tf.math.multiply(alfa, audio_2_latent_vecs_log_var))
+        tf.math.multiply(tf.constant(1-alfa, dtype='float32'),audio_1_latent_vecs_log_var), 
+        tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_log_var))
 
     sampled_latent_mix = Sampling()((latent_mix_mean, latent_mix_log_var))                      
 
@@ -296,11 +296,11 @@ for my_idx in range(num_random_interpolations):
         print('Working on alfa {2.1f}'.format(alfa))
         #generate mixed latent vectors
         latent_mix_mean = tf.math.add(
-                tf.math.multiply((1-alfa), audio_1_latent_vecs_mean), 
-                tf.math.multiply(alfa, audio_2_latent_vecs_mean))
+            tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_1_latent_vecs_mean), 
+            tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_mean))
         latent_mix_log_var = tf.math.add(
-                tf.math.multiply((1-alfa),audio_1_latent_vecs_log_var), 
-                tf.math.multiply(alfa, audio_2_latent_vecs_log_var))
+            tf.math.multiply(tf.constant(1-alfa, dtype='float32'),audio_1_latent_vecs_log_var), 
+            tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_log_var))
 
         sampled_latent_mix = Sampling()((latent_mix_mean, latent_mix_log_var))                      
 
