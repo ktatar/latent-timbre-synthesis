@@ -53,6 +53,9 @@ if not os.path.exists(my_cqt):
 
 
 #Model configs
+if config['VAE'] != None:
+    config['CVAE'] = config['VAE'] 
+    
 latent_dim = config['CVAE'].getint('latent_dim')
 
 #Training configs
