@@ -16,6 +16,6 @@ source /home/$USER/tf2_gpu/bin/activate
 sleep 5
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$EBROOTCUDA/lib64:$EBROOTCUDNN/lib64
 
-python generate_examples.py --dir /home/ktatar/scratch/datasets/Electroacoustic-Roads/func-timbre-vae2-cedar/run-027
-wait
-python generate_examples.py --dir /home/ktatar/scratch/datasets/Electroacoustic-Roads/func-timbre-vae2-cedar/run-028 
+python generate_interpolations.py --dir /home/ktatar/scratch/datasets/Electroacoustic-Roads/func-timbre-vae2-cedar/run-033
+wait 
+python generate_interpolations.py --dir /home/ktatar/scratch/datasets/Electroacoustic-Roads/func-timbre-vae2-cedar/run-034
