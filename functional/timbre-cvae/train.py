@@ -70,6 +70,9 @@ save_best_only = config['training'].getboolean('save_best_only')
 early_patience_epoch = config['training'].getint('early_patience_epoch')
 early_delta = config['training'].getfloat('early_delta')
 verbose = config['training'].getint('verbose')
+adam_beta_1 = config['training'].getfloat('adam_beta_1')
+adam_beta_2 = config['training'].getfloat('adam_beta_2')
+
 #Model configs
 latent_dim = config['CVAE'].getint('latent_dim')
 
@@ -85,7 +88,7 @@ kl_beta = config['CVAE'].getfloat('kl_beta')
 batch_norm = config['CVAE'].getboolean('batch_norm')
 mid_activations = config['CVAE'].get('mid_activations')
 if mid_activations == 'leaky_relu':
-  mid_activations = tf.nn.leaky_relu()
+  raise AssertionError('Use the train-withbatchnorm-withleakyrely.py script instead')
 output_activation = config['CVAE'].get('output_activation')
 
 #etc
@@ -285,7 +288,7 @@ if learning_schedule:
     decay_rate=0.96,
     staircase=True)
 
-optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=adam_beta_1, beta_2=adam_beta_2)
 
 vae.compile(optimizer, 
   loss=tf.keras.losses.MeanSquaredError())

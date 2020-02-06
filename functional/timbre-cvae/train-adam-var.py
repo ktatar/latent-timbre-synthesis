@@ -3,8 +3,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import tensorflow as tf
 from tensorflow.keras import layers
-import tensorflow_addons as tfa
-
 tf.keras.backend.clear_session()  # For easy reset of notebook state.
 
 import random
@@ -71,6 +69,10 @@ learning_schedule = config['training'].getboolean('learning_schedule')
 save_best_only = config['training'].getboolean('save_best_only')
 early_patience_epoch = config['training'].getint('early_patience_epoch')
 early_delta = config['training'].getfloat('early_delta')
+adam_beta_1 = config['training'].get('adam_beta_1')
+adam_beta_2 = config['training'].get('adam_beta_2')
+verbose = config['training'].getint('verbose')
+
 
 #Model configs
 latent_dim = config['CVAE'].getint('latent_dim')
@@ -85,6 +87,9 @@ kernel_size = config['CVAE'].getint('kernel_size')
 
 kl_beta = config['CVAE'].getfloat('kl_beta')
 batch_norm = config['CVAE'].getboolean('batch_norm')
+mid_activations = config['CVAE'].get('mid_activations')
+if mid_activations == 'leaky_relu':
+  mid_activations = tf.nn.leaky_relu()
 output_activation = config['CVAE'].get('output_activation')
 
 #etc
@@ -161,9 +166,10 @@ class Sampling(layers.Layer):
 original_dim = n_bins
 original_inputs = tf.keras.Input(shape=(original_dim,), name='encoder_input')
 x = layers.Reshape((bins_per_octave//2, num_octaves*2, 1))(original_inputs)
-x = layers.Conv2D(initial_filters, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+x = layers.Conv2D(initial_filters, kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
+if num_conv_layers>0:
   for i in range(num_conv_layers):
-    x = layers.Conv2D(initial_filters*pow(2,(i+1)), kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+    x = layers.Conv2D(initial_filters*pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
 
 # need to know the shape of the network here for the decoder
 shape_before_flattening = tf.keras.backend.int_shape(x)
@@ -173,7 +179,7 @@ shape_before_flattening = tf.keras.backend.int_shape(x)
 x = layers.Flatten()(x)
 if num_dense_layers > 0:
   for i in range(num_dense_layers):
-    x = layers.Dense(dense_units//pow(dense_unit_divider,i), activation='relu')(x)
+    x = layers.Dense(dense_units//pow(dense_unit_divider,i), activation=mid_activations)(x)
 
 # Two outputs, latent mean and (log)variance
 z_mean = layers.Dense(latent_dim, name='z_mean')(x)
@@ -189,8 +195,8 @@ if num_dense_layers>0:
   x = layers.Dense(dense_units//pow(dense_unit_divider,num_dense_layers-1))(latent_inputs)
   if num_dense_layers>1:
     for i in range(num_dense_layers-1):
-      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)), activation='relu')(x)
-  x = layers.Dense(np.prod(shape_before_flattening[1:]), activation='relu')(x)
+      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)), activation=mid_activations)(x)
+  x = layers.Dense(np.prod(shape_before_flattening[1:]), activation=mid_activations)(x)
 else:
   x = layers.Dense(np.prod(shape_before_flattening[1:]))(latent_inputs)
 # reshape
@@ -198,7 +204,7 @@ x = layers.Reshape(shape_before_flattening[1:])(x)
 # use Conv2DTranspose to reverse the conv layers from the encoder
 if num_conv_layers>0:
   for i in range(num_conv_layers):
-    x = layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+    x = layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
 x = layers.Conv2DTranspose(1, kernel_size, padding='same', strides=(2, 2))(x)
 
 outputs = layers.Flatten()(x)
@@ -283,12 +289,12 @@ if learning_schedule:
     decay_rate=0.96,
     staircase=True)
 
-optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=adam_beta_1, beta_2=adam_beta_2)
 
 vae.compile(optimizer, 
   loss=tf.keras.losses.MeanSquaredError())
 
-history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks)
+history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks, verbose=verbose)
 
 print('\nhistory dict:', history.history)
 
