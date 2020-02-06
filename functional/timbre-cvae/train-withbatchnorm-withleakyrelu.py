@@ -9,8 +9,6 @@ import random
 import numpy as np
 
 import os, sys, argparse, time
-from termcolor import colored
-os.system('color')
 
 import librosa
 import configparser
@@ -37,7 +35,7 @@ sample_rate = config['audio'].getint('sample_rate')
 hop_length = config['audio'].getint('hop_length')
 bins_per_octave = config['audio'].getint('bins_per_octave')
 num_octaves = config['audio'].getint('num_octaves')
-n_bins = int(num_octaves * bins_per_octave)
+n_bins = int(8 * bins_per_octave)
 n_iter = config['audio'].getint('n_iter')
 
 #dataset
@@ -47,12 +45,14 @@ workspace = config['dataset'].get('workspace')
 run_number = config['dataset'].getint('run_number')
 
 if not os.path.exists(dataset):
-    raise FileNotFoundError
-    
+    parser.error("dataset folder '%s' not found"%dataset)
+    sys.exit() 
+
 my_cqt = os.path.join(dataset, cqt_dataset)
 
 if not os.path.exists(my_cqt):
-    raise FileNotFoundError
+    parser.error("npy folder '%s' not found. Run create_dataset.py first. "%my_cqt)
+    sys.exit() 
 
 my_audio = os.path.join(dataset, 'audio')
     
@@ -69,7 +69,7 @@ learning_schedule = config['training'].getboolean('learning_schedule')
 save_best_only = config['training'].getboolean('save_best_only')
 early_patience_epoch = config['training'].getint('early_patience_epoch')
 early_delta = config['training'].getfloat('early_delta')
-verbose = config['training'].getint('verbose')
+
 #Model configs
 latent_dim = config['CVAE'].getint('latent_dim')
 
@@ -83,9 +83,6 @@ kernel_size = config['CVAE'].getint('kernel_size')
 
 kl_beta = config['CVAE'].getfloat('kl_beta')
 batch_norm = config['CVAE'].getboolean('batch_norm')
-mid_activations = config['CVAE'].get('mid_activations')
-if mid_activations == 'leaky_relu':
-  mid_activations = tf.nn.leaky_relu()
 output_activation = config['CVAE'].get('output_activation')
 
 #etc
@@ -119,10 +116,10 @@ if not continue_training:
 else:
     workdir = config['dataset'].get('workspace')
 
-print(colored("Workspace: {}".format(workdir), 'magenta'))
+print("Workspace: {}".format(workdir))
 
 #create the dataset
-print(colored('creating the dataset...', 'magenta'))
+print('creating the dataset...')
 training_array = []
 new_loop = True
 
@@ -137,10 +134,10 @@ for f in os.listdir(my_cqt):
             training_array = np.concatenate((training_array, new_array), axis=0)
 
 total_cqt = len(training_array)
-print(colored('Total number of CQT frames: {}'.format(total_cqt)), 'magenta')
+print('Total number of CQT frames: {}'.format(total_cqt))
 config['dataset']['total_frames'] = str(total_cqt)
 
-print(colored("saving initial configs...", 'magenta') )
+print("saving initial configs...")
 with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
   config.write(configfile)
 
@@ -162,21 +159,24 @@ class Sampling(layers.Layer):
 original_dim = n_bins
 original_inputs = tf.keras.Input(shape=(original_dim,), name='encoder_input')
 x = layers.Reshape((bins_per_octave//2, num_octaves*2, 1))(original_inputs)
-x = layers.Conv2D(initial_filters, kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
+x = layers.Conv2D(initial_filters, kernel_size, padding='same', strides=(2, 2))(x)
+x = layers.LeakyReLU()(x)
 if num_conv_layers>0:
   for i in range(num_conv_layers):
-    x = layers.Conv2D(initial_filters*pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
-
+    x = layers.Conv2D(initial_filters*pow(2,(i+1)), kernel_size, padding='same', strides=(2, 2))(x)
+    x = layers.LeakyReLU()(x)
 # need to know the shape of the network here for the decoder
 shape_before_flattening = tf.keras.backend.int_shape(x)
 
-#print("Shape before flattening: {}".format(shape_before_flattening))
+print("Shape before flattening: {}".format(shape_before_flattening))
 
 x = layers.Flatten()(x)
 if num_dense_layers > 0:
   for i in range(num_dense_layers):
-    x = layers.Dense(dense_units//pow(dense_unit_divider,i), activation=mid_activations)(x)
-
+    x = layers.Dense(dense_units//pow(dense_unit_divider,i))(x)
+    if batch_norm:
+      x = layers.BatchNormalization()(x)  
+    x = layers.LeakyReLU()(x)
 # Two outputs, latent mean and (log)variance
 z_mean = layers.Dense(latent_dim, name='z_mean')(x)
 z_log_var = layers.Dense(latent_dim, name='z_log_var')(x)
@@ -189,18 +189,29 @@ latent_inputs = tf.keras.Input(shape=(latent_dim,), name='z_sampling')
 # Expand
 if num_dense_layers>0:
   x = layers.Dense(dense_units//pow(dense_unit_divider,num_dense_layers-1))(latent_inputs)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)
   if num_dense_layers>1:
     for i in range(num_dense_layers-1):
-      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)), activation=mid_activations)(x)
-  x = layers.Dense(np.prod(shape_before_flattening[1:]), activation=mid_activations)(x)
+      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)))(x)
+      if batch_norm:
+        x = layers.BatchNormalization()(x)
+      x = layers.LeakyReLU()(x)
+  x = layers.Dense(np.prod(shape_before_flattening[1:]))(x)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)  
+  x = layers.LeakyReLU()(x)
 else:
   x = layers.Dense(np.prod(shape_before_flattening[1:]))(latent_inputs)
+  if batch_norm:
+    x = layers.BatchNormalization()(x)  
 # reshape
 x = layers.Reshape(shape_before_flattening[1:])(x)
 # use Conv2DTranspose to reverse the conv layers from the encoder
 if num_conv_layers>0:
   for i in range(num_conv_layers):
-    x = layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
+    x = layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', strides=(2, 2))(x)
+    x = layers.LeakyReLU()(x)
 x = layers.Conv2DTranspose(1, kernel_size, padding='same', strides=(2, 2))(x)
 
 outputs = layers.Flatten()(x)
@@ -290,14 +301,14 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 vae.compile(optimizer, 
   loss=tf.keras.losses.MeanSquaredError())
 
-history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks, verbose=verbose)
+history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks)
 
 print('\nhistory dict:', history.history)
 
 with open(os.path.join(workdir,'my_history.json'), 'w') as json_file:
   json.dump(history.history, json_file)
 
-print(colored("Finished training...", 'magenta'))
+print("Finished training...")
 end_time = time.time()
 config['extra']['end'] = time.asctime( time.localtime(end_time) )
 time_elapsed = end_time - start_time
@@ -306,7 +317,7 @@ with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
   config.write(configfile)
 
 # Generate examples 
-print(colored("Generating examples...", 'magenta'))
+print("Generating examples...")
 my_examples_folder = os.path.join(workdir, 'audio_examples')
 for f in os.listdir(my_audio):
   print("Examples for {}".format(os.path.splitext(f)[0])) 
@@ -321,27 +332,27 @@ for f in os.listdir(my_audio):
   # Invert using Griffin-Lim
   y_inv = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
   # And invert without estimating phase
-  #y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
-  #y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave)
+  y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
+  y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave)
 
   C_32 = C.astype('float32')
-  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
   
   ## Generate the same CQT using the model
   my_array = np.transpose(C_32)
   test_dataset = tf.data.Dataset.from_tensor_slices(my_array).batch(batch_size).prefetch(AUTOTUNE)
   output = tf.constant(0., dtype='float32', shape=(1,n_bins))
-  print(colored("Working on regenerating cqt magnitudes with the DL model", 'magenta') )
+  print("Working on regenerating cqt magnitudes with the DL model")
   for step, x_batch_train in enumerate(test_dataset):
     reconstructed = vae(x_batch_train)
     output = tf.concat([output, reconstructed], 0)
 
   output_np = np.transpose(output.numpy())
-  output_inv_32 = librosa.griffinlim_cqt(output_np[1:], 
-    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+  output_inv_32 = librosa.griffinlim_cqt(output_np, 
+    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
   if normalize_examples:
     output_inv_32 = librosa.util.normalize(output_inv_32)  
-  print(colored("Saving audio files...", 'magenta'))
+  print("Saving audio files...")
   my_audio_out_fold = os.path.join(my_examples_folder, os.path.splitext(f)[0])
   os.makedirs(my_audio_out_fold,exist_ok=True)
   librosa.output.write_wav(os.path.join(my_audio_out_fold,'original.wav'),
@@ -352,7 +363,7 @@ for f in os.listdir(my_audio):
                            output_inv_32, fs)
 
 #Generate a plot for loss 
-print(colored("Generating loss plot...", 'magenta'))
+print("Generating loss plot...")
 history_dict = history.history
 fig = plt.figure()
 plt.xlabel('Epochs')
@@ -361,4 +372,4 @@ plt.ylim(0.,0.01)
 plt.plot(history_dict['loss'])
 fig.savefig(os.path.join(workdir,'my_history_plot.pdf'), dpi=300)
 
-print(colored('bye...', 'magenta'))
+print('bye...')

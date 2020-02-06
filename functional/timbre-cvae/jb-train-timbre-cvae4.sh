@@ -18,4 +18,4 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$EBROOTCUDA/lib64:$EBROOTCUDNN/lib64
 
 #python /home/ktatar/scratch/timbre-space/functional/timbre-vae/create_dataset.py --config /home/ktatar/scratch/timbre-space/functional/timbre-vae/default-cedar.ini
 #wait
-python /home/ktatar/scratch/timbre-space/functional/timbre-cvae/train-with-nn-upsampling.py --config /home/ktatar/scratch/timbre-space/functional/timbre-cvae/default-cedar2.ini
+python /home/ktatar/scratch/timbre-space/functional/timbre-cvae/train-withbatchnorm-withleakyrelu.py --config /home/ktatar/scratch/timbre-space/functional/timbre-cvae/default-cedar4.ini
