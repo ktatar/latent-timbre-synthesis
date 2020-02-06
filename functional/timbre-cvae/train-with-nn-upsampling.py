@@ -80,6 +80,7 @@ dense_unit_divider = config['CVAE'].getint('dense_unit_divider')
 num_conv_layers = config['CVAE'].getint('num_conv_layers')
 initial_filters = config['CVAE'].getint('num_inital_filters')
 kernel_size = config['CVAE'].getint('kernel_size')
+upsampling = config['CVAE'].get('upsampling')
 
 kl_beta = config['CVAE'].getfloat('kl_beta')
 batch_norm = config['CVAE'].getboolean('batch_norm')
@@ -198,9 +199,10 @@ x = layers.Reshape(shape_before_flattening[1:])(x)
 # use Conv2DTranspose to reverse the conv layers from the encoder
 if num_conv_layers>0:
   for i in range(num_conv_layers):
-    x = layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
+    x = layers.UpSampling2D(size=(2, 2))(x)
+    x = layers.Conv2D(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(1, 1))(x)
 x = layers.UpSampling2D(size=(2, 2))(x)
-x = layers.Conv2D(1, kernel_size, padding='same', strides=(2, 2))(x)
+x = layers.Conv2D(1, kernel_size, padding='same', strides=(1, 1))(x)
 
 outputs = layers.Flatten()(x)
 decoder = tf.keras.Model(inputs=latent_inputs, outputs=outputs, name='decoder')
