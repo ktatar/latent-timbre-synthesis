@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import tensorflow as tf
 from tensorflow.keras import layers
+import tensorflow_addons as tfa
+
 tf.keras.backend.clear_session()  # For easy reset of notebook state.
 
 import random
@@ -160,7 +162,6 @@ original_dim = n_bins
 original_inputs = tf.keras.Input(shape=(original_dim,), name='encoder_input')
 x = layers.Reshape((bins_per_octave//2, num_octaves*2, 1))(original_inputs)
 x = layers.Conv2D(initial_filters, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
-if num_conv_layers>0:
   for i in range(num_conv_layers):
     x = layers.Conv2D(initial_filters*pow(2,(i+1)), kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
 

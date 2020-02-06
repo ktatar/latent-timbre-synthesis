@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import tensorflow as tf
 from tensorflow.keras import layers
+import tensorflow_addons as tfa
+
 tf.keras.backend.clear_session()  # For easy reset of notebook state.
 
 import random
@@ -159,10 +161,10 @@ class Sampling(layers.Layer):
 original_dim = n_bins
 original_inputs = tf.keras.Input(shape=(original_dim,), name='encoder_input')
 x = layers.Reshape((bins_per_octave//2, num_octaves*2, 1))(original_inputs)
-x = layers.Conv2D(initial_filters, kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+x = tfa.layers.WeightNormalization(layers.Conv2D(initial_filters, kernel_size, padding='same', activation='relu', strides=(2, 2)))(x)
 if num_conv_layers>0:
   for i in range(num_conv_layers):
-    x = layers.Conv2D(initial_filters*pow(2,(i+1)), kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+    x = tfa.layers.WeightNormalization(layers.Conv2D(initial_filters*pow(2,(i+1)), kernel_size, padding='same', activation='relu', strides=(2, 2)))(x)
 
 # need to know the shape of the network here for the decoder
 shape_before_flattening = tf.keras.backend.int_shape(x)
@@ -172,7 +174,7 @@ shape_before_flattening = tf.keras.backend.int_shape(x)
 x = layers.Flatten()(x)
 if num_dense_layers > 0:
   for i in range(num_dense_layers):
-    x = layers.Dense(dense_units//pow(dense_unit_divider,i), activation='relu')(x)
+    x = tfa.layers.WeightNormalization(layers.Dense(dense_units//pow(dense_unit_divider,i), activation='relu'))(x)
 
 # Two outputs, latent mean and (log)variance
 z_mean = layers.Dense(latent_dim, name='z_mean')(x)
@@ -185,19 +187,19 @@ encoder.summary()
 latent_inputs = tf.keras.Input(shape=(latent_dim,), name='z_sampling')
 # Expand
 if num_dense_layers>0:
-  x = layers.Dense(dense_units//pow(dense_unit_divider,num_dense_layers-1))(latent_inputs)
+  x = tfa.layers.WeightNormalization(layers.Dense(dense_units//pow(dense_unit_divider,num_dense_layers-1)))(latent_inputs)
   if num_dense_layers>1:
     for i in range(num_dense_layers-1):
-      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)), activation='relu')(x)
-  x = layers.Dense(np.prod(shape_before_flattening[1:]), activation='relu')(x)
+      x = tfa.layers.WeightNormalization(layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)), activation='relu'))(x)
+  x = tfa.layers.WeightNormalization(layers.Dense(np.prod(shape_before_flattening[1:]), activation='relu'))(x)
 else:
-  x = layers.Dense(np.prod(shape_before_flattening[1:]))(latent_inputs)
+  x = tfa.layers.WeightNormalization(layers.Dense(np.prod(shape_before_flattening[1:])))(latent_inputs)
 # reshape
 x = layers.Reshape(shape_before_flattening[1:])(x)
 # use Conv2DTranspose to reverse the conv layers from the encoder
 if num_conv_layers>0:
   for i in range(num_conv_layers):
-    x = layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation='relu', strides=(2, 2))(x)
+    x = tfa.layers.WeightNormalization(layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation='relu', strides=(2, 2)))(x)
 x = layers.Conv2DTranspose(1, kernel_size, padding='same', strides=(2, 2))(x)
 
 outputs = layers.Flatten()(x)
@@ -269,10 +271,7 @@ callbacks = [
       min_delta=early_delta,
       # "no longer improving" being further defined as "for at least 2 epochs"
       patience=early_patience_epoch,
-      verbose=1),
-    tf.keras.callbacks.TensorBoard(
-      log_dir=log_dir, 
-      histogram_freq=1)
+      verbose=1)
 ]
 
 if learning_schedule:
