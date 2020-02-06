@@ -199,7 +199,8 @@ x = layers.Reshape(shape_before_flattening[1:])(x)
 if num_conv_layers>0:
   for i in range(num_conv_layers):
     x = layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
-x = layers.Conv2DTranspose(1, kernel_size, padding='same', strides=(2, 2))(x)
+x = layers.UpSampling2D(size=(2, 2))(x)
+x = layers.Conv2D(1, kernel_size, padding='same', strides=(2, 2))(x)
 
 outputs = layers.Flatten()(x)
 decoder = tf.keras.Model(inputs=latent_inputs, outputs=outputs, name='decoder')
