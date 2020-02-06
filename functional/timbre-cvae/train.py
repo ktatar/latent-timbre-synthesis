@@ -69,7 +69,7 @@ learning_schedule = config['training'].getboolean('learning_schedule')
 save_best_only = config['training'].getboolean('save_best_only')
 early_patience_epoch = config['training'].getint('early_patience_epoch')
 early_delta = config['training'].getfloat('early_delta')
-
+verbose = config['training'].getint('verbose')
 #Model configs
 latent_dim = config['CVAE'].getint('latent_dim')
 
@@ -288,7 +288,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 vae.compile(optimizer, 
   loss=tf.keras.losses.MeanSquaredError())
 
-history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks)
+history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks, verbose=verbose)
 
 print('\nhistory dict:', history.history)
 
