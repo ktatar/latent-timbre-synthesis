@@ -30,6 +30,7 @@ bins_per_octave = config['audio'].getint('bins_per_octave')
 num_octaves = config['audio'].getint('num_octaves')
 n_bins = num_octaves * bins_per_octave
 n_iter=config['audio'].getint('n_iter')
+cqt_bit_depth = config['audio'].get('cqt_bit_depth')
 
 #dataset
 dataset = config['dataset'].get('datapath')
@@ -62,13 +63,14 @@ if __name__ == '__main__':
                 bins_per_octave = bins_per_octave
                 print('get CQTs...')
                 # Get the CQT magnitude
-                C_complex = librosa.cqt(y=s, sr=sample_rate, hop_length= hop_length, bins_per_octave=bins_per_octave, n_bins=8*bins_per_octave)
+                C_complex = librosa.cqt(y=s, sr=sample_rate, hop_length= hop_length, bins_per_octave=bins_per_octave, n_bins=n_bins)
                 C = np.abs(C_complex)
                 print('data processing...')
                 #tensorflow expects the transpose of librosa's output
                 C = np.transpose(C)
                 #tensorflow works in float32; cqt arrays are float64
-                C = C.astype('float32')
+                if cqt_bit_depth == 'float32':
+                    C = C.astype('float32')
                 print('writing: '+outfile)
                 np.save(outfile, C)
                 current_num += 1

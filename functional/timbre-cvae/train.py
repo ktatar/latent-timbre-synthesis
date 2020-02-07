@@ -39,7 +39,9 @@ bins_per_octave = config['audio'].getint('bins_per_octave')
 num_octaves = config['audio'].getint('num_octaves')
 n_bins = int(num_octaves * bins_per_octave)
 n_iter = config['audio'].getint('n_iter')
-
+cqt_bit_depth = config['audio'].get('cqt_bit_depth')
+if cqt_bit_depth == 'float64':
+  tf.keras.backend.set_floatx('float64')
 #dataset
 dataset = config['dataset'].get('datapath')
 cqt_dataset = config['dataset'].get('cqt_dataset')
@@ -326,22 +328,31 @@ for f in os.listdir(my_audio):
   # And invert without estimating phase
   #y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
   #y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave)
+  if cqt_bit_depth == 'float32':
+    C_32 = C.astype('float32')
+    y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+  elif cqt_bit_depth == 'float64':
+    y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
 
-  C_32 = C.astype('float32')
-  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
-  
   ## Generate the same CQT using the model
   my_array = np.transpose(C_32)
   test_dataset = tf.data.Dataset.from_tensor_slices(my_array).batch(batch_size).prefetch(AUTOTUNE)
-  output = tf.constant(0., dtype='float32', shape=(1,n_bins))
+  if cqt_bit_depth == 'float32':
+    output = tf.constant(0., dtype='float32', shape=(1,n_bins))
+  elif cqt_bit_depth == 'float64':
+    output = tf.constant(0., dtype='float64', shape=(1,n_bins))      
   print(colored("Working on regenerating cqt magnitudes with the DL model", 'magenta') )
   for step, x_batch_train in enumerate(test_dataset):
     reconstructed = vae(x_batch_train)
     output = tf.concat([output, reconstructed], 0)
 
   output_np = np.transpose(output.numpy())
-  output_inv_32 = librosa.griffinlim_cqt(output_np[1:], 
+  if cqt_bit_depth == 'float32':
+    output_inv_32 = librosa.griffinlim_cqt(output_np[1:], 
     sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+  elif cqt_bit_depth == 'float64':
+    output_inv_32 = librosa.griffinlim_cqt(output_np[1:], 
+    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
   if normalize_examples:
     output_inv_32 = librosa.util.normalize(output_inv_32)  
   print(colored("Saving audio files...", 'magenta'))
