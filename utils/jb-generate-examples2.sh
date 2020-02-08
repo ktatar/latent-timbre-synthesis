@@ -2,7 +2,7 @@
 #SBATCH --gres=gpu:1        # request GPU "generic resource"
 #SBATCH --cpus-per-task=6   # maximum CPU cores per GPU request: 6 on Cedar, 16 on Graham.
 #SBATCH --mem=12000M        # memory per node
-#SBATCH --time=0-08:00      # time (DD-HH:MM)
+#SBATCH --time=0-10:00      # time (DD-HH:MM)
 #SBATCH --output=%N-%j.out  # %N for node name, %j for jobID
 #SBATCH --mail-user=ktatar@sfu.ca
 #SBATCH --mail-type=BEGIN
@@ -16,6 +16,6 @@ source /home/$USER/tf2_gpu/bin/activate
 sleep 5
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$EBROOTCUDA/lib64:$EBROOTCUDNN/lib64
 
-python generate_interpolations.py --dir /home/ktatar/scratch/datasets/Electroacoustic-Roads/func-timbre-vae2-cedar/run-033
+python generate_interpolations.py --dir /home/ktatar/scratch/datasets/ambient-lawrence-cruel/func-timbre-cvae-upsampled-cedar/run-000
 wait 
-python generate_interpolations.py --dir /home/ktatar/scratch/datasets/Electroacoustic-Roads/func-timbre-vae2-cedar/run-034
+python generate_interpolations.py --dir /home/ktatar/scratch/datasets/ambient-lawrence-cruel/func-timbre-cvae-upsampled-cedar/run-001
