@@ -46,17 +46,18 @@ my_cqt = os.path.join(dataset, cqt_dataset)
 my_audio = os.path.join(dataset, 'audio')
 
 if not os.path.exists(dataset):
-    raise FileNotFoundError
+    raise FileNotFoundError('Dataset folder does not exist: {}'.format(dataset))
 
 if not os.path.exists(my_cqt):
-    raise FileNotFoundError
+    raise FileNotFoundError('CQT folder does not exist: {}'.format(my_cqt))
 
 
 #Model configs
 try:
     print(config['VAE'])
     config['CVAE'] = config['VAE'] 
-    
+except:
+    pass
 latent_dim = config['CVAE'].getint('latent_dim')
 
 #Training configs
