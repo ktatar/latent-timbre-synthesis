@@ -199,9 +199,9 @@ x = layers.Reshape(shape_before_flattening[1:])(x)
 # use Conv2DTranspose to reverse the conv layers from the encoder
 if num_conv_layers>0:
   for i in range(num_conv_layers):
-    x = layers.UpSampling2D(size=(2, 2))(x)
+    x = layers.UpSampling2D(size=(2, 2), interpolation=upsampling)(x)
     x = layers.Conv2D(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(1, 1))(x)
-x = layers.UpSampling2D(size=(2, 2))(x)
+x = layers.UpSampling2D(size=(2, 2), interpolation=upsampling)(x)
 x = layers.Conv2D(1, kernel_size, padding='same', strides=(1, 1))(x)
 
 outputs = layers.Flatten()(x)
