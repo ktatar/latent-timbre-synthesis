@@ -314,7 +314,7 @@ with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
   config.write(configfile)
 
 # Generate examples 
-print("Generating examples...")
+print(colored("Generating examples...", 'magenta'))
 my_examples_folder = os.path.join(workdir, 'audio_examples')
 for f in os.listdir(my_audio):
   print("Examples for {}".format(os.path.splitext(f)[0])) 
@@ -327,29 +327,29 @@ for f in os.listdir(my_audio):
   C_complex = librosa.cqt(y=s, sr=fs, hop_length= hop_length, bins_per_octave=bins_per_octave, n_bins=n_bins)
   C = np.abs(C_complex)
   # Invert using Griffin-Lim
-  y_inv = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
+  #y_inv = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
   # And invert without estimating phase
-  y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
-  y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave)
-
+  #y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
+  #y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave)
   C_32 = C.astype('float32')
-  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
-  
+  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
   ## Generate the same CQT using the model
   my_array = np.transpose(C_32)
   test_dataset = tf.data.Dataset.from_tensor_slices(my_array).batch(batch_size).prefetch(AUTOTUNE)
   output = tf.constant(0., dtype='float32', shape=(1,n_bins))
-  print("Working on regenerating cqt magnitudes with the DL model")
+
+  print(colored("Working on regenerating cqt magnitudes with the DL model", 'magenta') )
   for step, x_batch_train in enumerate(test_dataset):
     reconstructed = vae(x_batch_train)
     output = tf.concat([output, reconstructed], 0)
 
   output_np = np.transpose(output.numpy())
-  output_inv_32 = librosa.griffinlim_cqt(output_np, 
-    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
+  output_inv_32 = librosa.griffinlim_cqt(output_np[1:], 
+    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+
   if normalize_examples:
     output_inv_32 = librosa.util.normalize(output_inv_32)  
-  print("Saving audio files...")
+  print(colored("Saving audio files...", 'magenta'))
   my_audio_out_fold = os.path.join(my_examples_folder, os.path.splitext(f)[0])
   os.makedirs(my_audio_out_fold,exist_ok=True)
   librosa.output.write_wav(os.path.join(my_audio_out_fold,'original.wav'),
@@ -360,7 +360,7 @@ for f in os.listdir(my_audio):
                            output_inv_32, fs)
 
 #Generate a plot for loss 
-print("Generating loss plot...")
+print(colored("Generating loss plot...", 'magenta'))
 history_dict = history.history
 fig = plt.figure()
 plt.xlabel('Epochs')
@@ -369,4 +369,4 @@ plt.ylim(0.,0.01)
 plt.plot(history_dict['loss'])
 fig.savefig(os.path.join(workdir,'my_history_plot.pdf'), dpi=300)
 
-print('bye...')
+print(colored('bye...', 'magenta'))
