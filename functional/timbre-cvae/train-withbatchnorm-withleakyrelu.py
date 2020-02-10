@@ -9,6 +9,8 @@ import random
 import numpy as np
 
 import os, sys, argparse, time
+from termcolor import colored
+os.system('color')
 
 import librosa
 import configparser
