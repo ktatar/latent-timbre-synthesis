@@ -277,14 +277,14 @@ for f in os.listdir(my_audio):
   C_complex = librosa.cqt(y=s, sr=fs, hop_length= hop_length, bins_per_octave=bins_per_octave, n_bins=n_bins)
   C = np.abs(C_complex)
   # Invert using Griffin-Lim
-  y_inv = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
+  #y_inv = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
   
   # And invert without estimating phase
   #y_icqt = librosa.icqt(C, sr=fs, hop_length=hop_length, bins_per_octave=bins_per_octave)
   #y_icqt_full = librosa.icqt(C_complex, hop_length=hop_length, sr=fs, bins_per_octave=bins_per_octave, , dtype=np.float32)
 
   C_32 = C.astype('float32')
-  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave)
+  y_inv_32 = librosa.griffinlim_cqt(C, sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
   
   ## Generate the same CQT using the model
   my_array = np.transpose(C_32)
@@ -297,18 +297,18 @@ for f in os.listdir(my_audio):
 
   output_np = np.transpose(output.numpy())
   output_inv_32 = librosa.griffinlim_cqt(output_np[1:], 
-    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, , dtype=np.float32)
+    sr=fs, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
   if normalize_examples:
     output_inv_32 = librosa.util.normalize(output_inv_32)
   print("Saving audio files...")
   my_audio_out_fold = os.path.join(my_examples_folder, os.path.splitext(f)[0])
   os.makedirs(my_audio_out_fold,exist_ok=True)
   librosa.output.write_wav(os.path.join(my_audio_out_fold,'original.wav'),
-                           s, fs)
+                           s, sample_rate)
   librosa.output.write_wav(os.path.join(my_audio_out_fold,'original-icqt+gL.wav'),
-                           y_inv_32, fs)
+                           y_inv_32, sample_rate)
   librosa.output.write_wav(os.path.join(my_audio_out_fold,'VAE-output+gL.wav'),
-                           output_inv_32, fs)
+                           output_inv_32, sample_rate)
 
 #Generate a plot for loss 
 print("Generating loss plot...")
