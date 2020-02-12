@@ -67,6 +67,8 @@ learning_schedule = config['training'].getboolean('learning_schedule')
 save_best_only = config['training'].getboolean('save_best_only')
 early_patience_epoch = config['training'].getint('early_patience_epoch')
 early_delta = config['training'].getfloat('early_delta')
+adam_beta_1 = config['training'].getfloat('adam_beta_1')
+adam_beta_2 = config['training'].getfloat('adam_beta_2')
 
 #Model configs
 latent_dim = config['VAE'].getint('latent_dim')
@@ -220,7 +222,7 @@ if learning_schedule:
     staircase=True)
 
 
-optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=adam_beta_1, beta_2=adam_beta_2)
 
 vae.compile(optimizer, 
   loss=tf.keras.losses.MeanSquaredError())
