@@ -186,7 +186,8 @@ my_alfas = np.arange(0.1,1,0.1)
 for i in range(len(my_alfas)):
     alfa = my_alfas[i]
     print('Working on alfa {:2.1f}'.format(alfa))
-    #generate mixed latent vectors
+    #generate mixed latent vectors    
+    #alfa(latent1-latent2)+latent2 = alfa * latent1 + (1-alfa) * latent2
     latent_mix_mean = tf.math.add(
         tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_1_latent_vecs_mean), 
         tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_mean))
@@ -205,7 +206,7 @@ for i in range(len(my_alfas)):
             output_C = decoder(sampled_latent_mix,training=False)
     print('Running phase estimation')           
     y_inv_audio_mix = librosa.griffinlim_cqt(np.transpose(output_C), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
-    librosa.output.write_wav(os.path.join(my_fixed_interpolations_folder,'x_interpolations_{:2.1f}.wav'.format(alfa)),
+    librosa.output.write_wav(os.path.join(my_fixed_interpolations_folder, '{:2d}-x_interpolations_{:2.1f}.wav'.format(i,alfa)),
                            y_inv_audio_mix, sample_rate)
 
 # Interpolations of random sections
