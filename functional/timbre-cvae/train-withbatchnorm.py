@@ -312,7 +312,6 @@ config['extra']['end'] = time.asctime( time.localtime(end_time) )
 time_elapsed = end_time - start_time
 config['extra']['time_elapsed'] = str(time_elapsed)
 config['extra']['total_epochs'] = str(len(history.history['loss']))
-config['extra']['total_epochs'] = str(len(history.history['loss']))
 
 with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
   config.write(configfile)
