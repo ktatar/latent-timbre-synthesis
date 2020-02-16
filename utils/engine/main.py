@@ -33,7 +33,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 #verbose for the extra prints
 verbose = True
 normalize = False
-config = {}
+config = configparser.ConfigParser(allow_no_value=True)
 load_datasetpath_with_model = False
 dataset = ''
 run_path = ''
@@ -106,7 +106,7 @@ def initiate_dataset(address: str, *osc_arguments: List[Any]) -> None:
     warning_plus_osc(my_warning)
 
 def load_model(address: str, *osc_arguments: List[Any]) -> None:
-  global dataset, run_path, my_cqt, my_audio, trained_model, encoder, decoder
+  global dataset, run_path, my_cqt, my_audio, trained_model, encoder, decoder, config
   run_path = Path(osc_arguments[0])
 
   #reports
@@ -118,7 +118,6 @@ def load_model(address: str, *osc_arguments: List[Any]) -> None:
     warning_plus_osc(my_warning)
     return
 
-  config = configparser.ConfigParser(allow_no_value=True)
   config_path = run_path / 'config.ini'
   config.read(config_path)
 
