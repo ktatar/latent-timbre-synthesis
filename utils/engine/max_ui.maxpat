@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 35.0, 85.0, 847.0, 400.0 ],
+		"rect" : [ 110.0, 357.0, 890.0, 394.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -103,8 +103,8 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 152.0, 326.0, 59.0, 22.0 ],
-					"text" : "/generate"
+					"patching_rect" : [ 67.0, 351.0, 109.0, 22.0 ],
+					"text" : "/generate 10 30 45"
 				}
 
 			}
@@ -124,13 +124,12 @@
 , 			{
 				"box" : 				{
 					"id" : "obj-18",
-					"linecount" : 5,
 					"maxclass" : "message",
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 9.0, 562.0, 389.0, 77.0 ],
-					"text" : "\"Second sound is set to: \n 05 Sculptor \n at the path \n D:my_workspacedatasetElectroacoustic-Roads-with-silenceaudio05 Sculptor.wav\""
+					"patching_rect" : [ 9.0, 562.0, 389.0, 22.0 ],
+					"text" : "\"Generating interpolations\""
 				}
 
 			}
@@ -220,37 +219,12 @@
 			}
 , 			{
 				"box" : 				{
-					"id" : "obj-31",
-					"linecount" : 3,
-					"maxclass" : "message",
-					"numinlets" : 2,
-					"numoutlets" : 1,
-					"outlettype" : [ "" ],
-					"patching_rect" : [ 384.0, 349.0, 317.0, 50.0 ],
-					"text" : "/load/dataset D:/my_workspace/dataset/Electroacoustic-Roads-with-silence/"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-29",
-					"maxclass" : "newobj",
-					"numinlets" : 1,
-					"numoutlets" : 1,
-					"outlettype" : [ "" ],
-					"patching_rect" : [ 441.0, 315.0, 97.0, 22.0 ],
-					"text" : "udpreceive 7020"
-				}
-
-			}
-, 			{
-				"box" : 				{
 					"id" : "obj-25",
 					"maxclass" : "message",
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 305.0, 225.0, 355.0, 22.0 ],
+					"patching_rect" : [ 296.0, 198.0, 355.0, 22.0 ],
 					"text" : "D:/my_workspace/dataset/Electroacoustic-Roads-with-silence/"
 				}
 
@@ -524,13 +498,6 @@
 				"patchline" : 				{
 					"destination" : [ "obj-1", 0 ],
 					"source" : [ "obj-26", 0 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
-					"destination" : [ "obj-31", 1 ],
-					"source" : [ "obj-29", 0 ]
 				}
 
 			}

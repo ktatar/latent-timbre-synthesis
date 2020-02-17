@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function, unicode_literals
-
-import tensorflow as tf
-from tensorflow.keras import layers
-tf.keras.backend.clear_session()  # For easy reset of notebook state.
-
 import random
 import numpy as np
 import ctypes
@@ -18,8 +13,19 @@ from pythonosc import dispatcher
 from pythonosc import osc_server
 from typing import List, Any
 from pythonosc.udp_client import SimpleUDPClient
-
 import warnings 
+import sounddevice as sd
+
+def print_plus_osc(my_report):
+  print(my_report)
+  client.send_message("/report", my_report)
+
+print("Initiating Tensorflow...")
+
+import tensorflow as tf
+from tensorflow.keras import layers
+tf.keras.backend.clear_session()  # For easy reset of notebook state.
+
 def custom_formatwarning(msg, *args, **kwargs):
     # ignore everything except the message
     return str(msg) + '\n'
@@ -40,6 +46,7 @@ run_path = ''
 my_audio = ''
 my_cqt = ''
 n_iter = 1
+batch_size = 16
 sound = {
   'interpolate_two':{
     'first':{
@@ -87,10 +94,6 @@ def set_load_datasetpath_with_model(my_state=False):
 def warning_plus_osc(my_warning):
   warnings.warn(my_warning)
   client.send_message("/report", my_warning)
-
-def print_plus_osc(my_report):
-  print(my_report)
-  client.send_message("/report", my_report)
 
 def initiate_dataset(address: str, *osc_arguments: List[Any]) -> None:
   global dataset
@@ -200,8 +203,8 @@ def set_i2_second_sound(address: str, *osc_arguments: List[Any]) -> None:
     client.send_message("/sound/interpolate_two/second/name", sound['interpolate_two']['second']['name'])   
 
     #Load Audio 1 
-    sound['interpolate_two']['first']['duration'] = librosa.get_duration(filename=audio_path)
-    sound['interpolate_two']['first']['CQT'] = np.load(os.path.join(my_cqt, sound['interpolate_two']['first']['name']+'.npy'))
+    sound['interpolate_two']['second']['duration'] = librosa.get_duration(filename=audio_path)
+    sound['interpolate_two']['second']['CQT'] = np.load(os.path.join(my_cqt, sound['interpolate_two']['second']['name']+'.npy'))
 
   #If path does not exists  
   else:
@@ -238,8 +241,28 @@ def set_normalization(address: str, *osc_arguments: List[Any]) -> None:
 
 def generate_sound(address: str, *osc_arguments: List[Any]) -> None:  
   if len(osc_arguments) != 3:
-    warning_plus_osc('Generate sound function did not receive enough arguments ({}). Required number of arguments are 3: duration, audio_1_offset, audio_2_offset'.format(len(osc_arguments)))
+    warning_plus_osc('Error: Generate sound function did not receive enough arguments ({}). Required number of arguments are 3: duration, audio_1_offset, audio_2_offset. Units are seconds.'.format(len(osc_arguments)))
     return
+
+
+  example_length = int(osc_arguments[0])
+  if verbose:
+    print_plus_osc('Interpolate two - duration set to {}'.format(example_length))
+  
+  interpolations_audio_1 = sound['interpolate_two']['first']['name']
+  audio_1_offset = osc_arguments[1]
+  
+  interpolations_audio_2 = sound['interpolate_two']['second']['name']
+  audio_2_offset = osc_arguments[2]
+  
+  if (audio_1_offset+example_length) > sound['interpolate_two']['first']['duration']:
+    warning_plus_osc('audio_1_offset+example_length > Audio_1 total length. Can not generate examples')
+    return
+  
+  elif (audio_2_offset+example_length) > sound['interpolate_two']['second']['duration']:
+    warning_plus_osc('audio_2_offset+example_length > Audio_2 total length. Can not generate interpolations')
+    return 
+
   #import audio configs 
   sample_rate = config['audio'].getint('sample_rate')
   hop_length = config['audio'].getint('hop_length')
@@ -247,6 +270,7 @@ def generate_sound(address: str, *osc_arguments: List[Any]) -> None:
   num_octaves = config['audio'].getint('num_octaves')
   n_bins = int(num_octaves * bins_per_octave)
   n_iter = config['audio'].getint('n_iter')
+  
   #Model configs
   if 'VAE' in config:
     config['model'] = config['VAE'] 
@@ -258,24 +282,76 @@ def generate_sound(address: str, *osc_arguments: List[Any]) -> None:
 
   latent_dim = config['model'].getint('latent_dim')
 
-  example_length = int(osc_arguments[0])
   if verbose:
-    print_plus_osc('Interpolate 2 - duration set to {}'.format(example_length))
+    print_plus_osc('First audio: {} \n First audio offset: {} \n Second audio: {} \n Second audio offset: {} \n Example Length: {}'.format(interpolations_audio_1, audio_1_offset, interpolations_audio_2, audio_2_offset, example_length))
   
+  audio_1_offset_frames = librosa.time_to_samples(audio_1_offset, sr=sample_rate)//hop_length
+  audio_2_offset_frames = librosa.time_to_samples(audio_2_offset, sr=sample_rate)//hop_length
+  duration_frames = librosa.time_to_samples(example_length, sr=sample_rate)//hop_length
 
-  interpolations_audio_1 = sound['interpolate_two']['first']['name']
-  audio_1_offset = osc_arguments[1]
-  
-  interpolations_audio_2 = sound['interpolate_two']['second']['name']
-  audio_2_offset = osc_arguments[2]
-  
+  cqt_audio_1 = sound['interpolate_two']['first']['CQT']
+  C_1 = cqt_audio_1[audio_1_offset_frames:(audio_1_offset_frames+duration_frames)]
+
+  #Generate latent vectors for audio_1
+  audio_1_dataset = tf.data.Dataset.from_tensor_slices(C_1).batch(batch_size).prefetch(AUTOTUNE)
+  latent_vecs_mean = tf.constant(0., dtype='float32', shape=(1,latent_dim))
+  latent_vecs_log_var = tf.constant(0., dtype='float32', shape=(1,latent_dim))
+
+  for step, x_batch_train in enumerate(audio_1_dataset):
+      mean, log_var = encoder(x_batch_train, training=False)
+      latent_vecs_mean = tf.concat([latent_vecs_mean, mean], 0)
+      latent_vecs_log_var = tf.concat([latent_vecs_log_var, log_var], 0)
+
+  audio_1_latent_vecs_mean = latent_vecs_mean[1:]
+  audio_1_latent_vecs_log_var = latent_vecs_log_var[1:]
+
+  cqt_audio_2 = sound['interpolate_two']['second']['CQT']
+  C_2 = cqt_audio_2[audio_2_offset_frames:(audio_2_offset_frames+duration_frames)]
+
+  #Generate latent vectors for audio_2
+  audio_2_dataset = tf.data.Dataset.from_tensor_slices(C_2).batch(batch_size).prefetch(AUTOTUNE)
+  latent_vecs_mean = tf.constant(0., dtype='float32', shape=(1,latent_dim))
+  latent_vecs_log_var = tf.constant(0., dtype='float32', shape=(1,latent_dim))
+
+  for step, x_batch_train in enumerate(audio_2_dataset):
+      mean, log_var = encoder(x_batch_train, training=False)
+      latent_vecs_mean = tf.concat([latent_vecs_mean, mean], 0)
+      latent_vecs_log_var = tf.concat([latent_vecs_log_var, log_var], 0)
+
+  audio_2_latent_vecs_mean = latent_vecs_mean[1:]
+  audio_2_latent_vecs_log_var = latent_vecs_log_var[1:]
+
+  #Generate and save interpolations 
+  if verbose: 
+    print_plus_osc('Generating interpolations')
+
+  alfa = 0.5
+
+  #generate mixed latent vectors    
+  #alfa(latent1-latent2)+latent2 = alfa * latent1 + (1-alfa) * latent2
+  latent_mix_mean = tf.math.add(
+      tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_1_latent_vecs_mean), 
+      tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_mean))
+  latent_mix_log_var = tf.math.add(
+      tf.math.multiply(tf.constant(1-alfa, dtype='float32'),audio_1_latent_vecs_log_var), 
+      tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_log_var))
+
+  sampled_latent_mix = Sampling()((latent_mix_mean, latent_mix_log_var))                      
+
+  decoder_dataset = tf.data.Dataset.from_tensor_slices(sampled_latent_mix).batch(batch_size).prefetch(AUTOTUNE)
+
   if verbose:
-    print_plus_osc('First audio: {} \n First audio offset: {} \n Second audio: {} \n Second audio offset: {}'.format(interpolations_audio_1, audio_1_offset, interpolations_audio_2, audio_2_offset))
-  
-  #required for the initial test
-  os.makedirs(os.path.join(dataset, test),exist_ok=True)
-
-
+    print('Generating DL model outputs')
+  output_C = tf.constant(0., dtype='float32', shape=(1,n_bins))
+  with tf.keras.utils.CustomObjectScope({'Sampling': Sampling}):
+    for step, x_batch_train in enumerate(decoder_dataset):
+      output_C = decoder(sampled_latent_mix,training=False)
+  if verbose:
+    print('Running phase estimation')           
+  y_inv_audio_mix = librosa.griffinlim_cqt(np.transpose(output_C), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+  if verbose:
+    print_plus_osc("Audio generated")
+  librosa.output.write_wav('test.wav', y_inv_audio_mix, sr=sample_rate)
 
 if __name__ == "__main__":
     #Parse arguments
