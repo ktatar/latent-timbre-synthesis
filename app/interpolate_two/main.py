@@ -72,8 +72,8 @@ sound = {
       'cqt_path':'',
       'CQT': np.empty([0])
     },
-    'alfa': np.empty([1000]) 
-  
+    'alfa': np.empty([1000]).fill(0.5),
+    'save_folder': '' 
   }
 }
 #generate empty models
@@ -85,7 +85,7 @@ decoder = tf.keras.Model()
 audio_device_list = {}
 
 #A numpy array to pass the audio around 
-y_inv_audio_mix = np.empty([])
+generated_audio = np.empty([])
 #We need to define the custom Sampling Layer
 class Sampling(layers.Layer):
   """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
@@ -147,7 +147,7 @@ def initiate_dataset(address: str, *osc_arguments: List[Any]) -> None:
     warning_plus_osc(my_warning)
 
 def load_model(address: str, *osc_arguments: List[Any]) -> None:
-  global dataset, run_path, my_cqt, my_audio, trained_model, encoder, decoder, config, sample_rate, hop_length, bins_per_octave, num_octaves, n_bins, n_iter
+  global dataset, run_path, my_cqt, my_audio, trained_model, encoder, decoder, config, sample_rate, hop_length, bins_per_octave, num_octaves, n_bins
 
   run_path = Path(osc_arguments[0])
 
@@ -189,7 +189,7 @@ def load_model(address: str, *osc_arguments: List[Any]) -> None:
   bins_per_octave = config['audio'].getint('bins_per_octave')
   num_octaves = config['audio'].getint('num_octaves')
   n_bins = int(num_octaves * bins_per_octave)
-  n_iter = config['audio'].getint('n_iter')
+  #n_iter = config['audio'].getint('n_iter')
 
   sd.default.samplerate = sample_rate
 
@@ -244,7 +244,7 @@ def set_i2_first_sound(address: str, *osc_arguments: List[Any]) -> None:
     warning_plus_osc(my_warning)
 
 def set_i2_second_sound(address: str, *osc_arguments: List[Any]) -> None:
-  global sound
+  global sound, generated_audio
 
   file_name = Path(osc_arguments[0]).stem  
   audio_path = my_audio / (file_name+'.wav')
@@ -299,7 +299,7 @@ def set_normalization(address: str, *osc_arguments: List[Any]) -> None:
     print_plus_osc('Output normalization is off.')
 
 def generate_sound(address: str, *osc_arguments: List[Any]) -> None:  
-  global y_inv_audio_mix
+  global generated_audio
 
   if len(osc_arguments) != 3:
     warning_plus_osc('Error: Generate sound function did not receive enough arguments ({}). Required number of arguments are 3: duration, audio_1_offset, audio_2_offset. Units are seconds.'.format(len(osc_arguments)))
@@ -373,13 +373,16 @@ def generate_sound(address: str, *osc_arguments: List[Any]) -> None:
   audio_2_latent_vecs_mean = latent_vecs_mean[1:]
   audio_2_latent_vecs_log_var = latent_vecs_log_var[1:]
 
-  #Generate and save interpolations 
+  #Generate interpolations 
   if verbose: 
     print_plus_osc('Generating interpolations')
 
   #Get alfa
   alfa = sound['interpolate_two']['alfa']
   
+  #Map [-1, 1] range from Max to [0,1]. 
+  alfa = (alfa + 1.0)/2.0
+
   #Resample and reshape to multiply each latent vector with an alfa vector
   f = interpolate.interp1d(np.arange(0, len(alfa)), alfa)
   my_stretched_alfa = f(np.linspace(0.0, len(alfa)-1, len(audio_1_latent_vecs_mean)))
@@ -392,38 +395,85 @@ def generate_sound(address: str, *osc_arguments: List[Any]) -> None:
   #generate mixed latent vectors    
   #alfa(latent1-latent2)+latent2 = alfa * latent1 + (1-alfa) * latent2
   latent_mix_mean = tf.math.add(
-      tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_1_latent_vecs_mean), 
-      tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_mean))
+      tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_1_latent_vecs_mean), 
+      tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_2_latent_vecs_mean))
   latent_mix_log_var = tf.math.add(
-      tf.math.multiply(tf.constant(1-alfa, dtype='float32'),audio_1_latent_vecs_log_var), 
-      tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_log_var))
+      tf.math.multiply(tf.constant(alfa, dtype='float32'),audio_1_latent_vecs_log_var), 
+      tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_2_latent_vecs_log_var))
 
   sampled_latent_mix = Sampling()((latent_mix_mean, latent_mix_log_var))                      
 
   decoder_dataset = tf.data.Dataset.from_tensor_slices(sampled_latent_mix).batch(batch_size).prefetch(AUTOTUNE)
 
   if verbose:
-    print('Generating DL model outputs')
+    print_plus_osc('Generating DL model outputs')
   output_C = tf.constant(0., dtype='float32', shape=(1,n_bins))
   with tf.keras.utils.CustomObjectScope({'Sampling': Sampling}):
     for step, x_batch_train in enumerate(decoder_dataset):
       output_C = decoder(sampled_latent_mix,training=False)
   if verbose:
-    print('Running phase estimation') 
+    print_plus_osc('Running phase estimation') 
 
   y_inv_audio_mix = librosa.griffinlim_cqt(np.transpose(output_C), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+  generated_audio = y_inv_audio_mix
   if verbose:
     print_plus_osc("Audio generated, playing...")
   
-  sd.play(y_inv_audio_mix)
-  #save the audio to a wav file
-  #librosa.output.write_wav('test.wav', y_inv_audio_mix, sr=sample_rate)
+  sd.play(generated_audio)
+
+def play_again(address: str, *osc_arguments: List[Any]) -> None:
+
+    sd.play(generated_audio)
+    if verbose:
+        print_plus_osc("Playing the previous audio...")
+
+def save_audio(address: str, *osc_arguments: List[Any]) -> None:
+    if sound['interpolate_two']['save_folder'] == '':
+        print_plus_osc('Please provide a save folder before saving the audio')
+        return
+
+    #Try filenames until you find an available one.
+    count = 0
+    while True:
+        filename = 'generated_audio-{:05d}.wav'.format(count)
+        save_path = sound['interpolate_two']['save_folder'] / filename 
+        if os.path.exists(save_path):
+            count += 1
+            continue
+        else:
+            #save the audio to a wav file
+            librosa.output.write_wav(save_path, generated_audio, sr=sample_rate)
+            print_plus_osc('Saved the last generated sound at the path: {}'.format(save_path))
 
 def set_alfa(address: str, *osc_arguments: List[Any]) -> None:
   global sound
 
   sound['interpolate_two']['alfa'] = np.asarray(osc_arguments[:]) 
   print_plus_osc('Alfa vector is updated.')
+
+def set_save_folder(address: str, *osc_arguments: List[Any]) -> None:
+    global sound
+
+    if os.path.exists(Path(osc_arguments[0])):
+        sound['interpolate_two']['save_folder'] = osc_arguments[0]
+        print_plus_osc('Save folder set to {}'.format(sound['interpolate_two']['save_folder']))
+    else:
+        warning_plus_osc('Save folder does not exist at the path {}'.format(osc_arguments[0]))    
+
+def stop_playing(address: str, *osc_arguments: List[Any]) -> None:
+    
+    sd.stop()
+    print_plus_osc('Stopped audio playback...')
+
+def test_connection(address: str, *osc_arguments: List[Any]) -> None:
+  print('Received the connection test message. Sending a message to test the connection from python to Max. Did you receive "Connection works"? ')
+  client.send_message("/report", ' Connection works. #{}'.format(random.randint(1,100)) )
+
+def set_phase_iter(address: str, *osc_arguments: List[Any]) -> None:
+  global n_iter
+
+  n_iter = int(osc_arguments[0]) 
+  print_plus_osc('Number of phase estimation iterations set to {}'.format(n_iter))
 
 if __name__ == "__main__":
     #Parse arguments
@@ -452,6 +502,8 @@ if __name__ == "__main__":
 
 
   dispatcher = dispatcher.Dispatcher()
+  dispatcher.map("/test/connection", test_connection)
+
   dispatcher.map("/load/dataset", initiate_dataset)
   dispatcher.map("/load/model", load_model)
 
@@ -464,8 +516,14 @@ if __name__ == "__main__":
   dispatcher.map('/audio/device/out', set_output_audio_device)
   #interpolate two sounds
   dispatcher.map("/interpolate_two/generate", generate_sound)
+  
+  dispatcher.map('/sound/set_phase_iter', set_phase_iter)
   dispatcher.map("/sound/interpolate_two/first/audio_path", set_i2_first_sound)
   dispatcher.map("/sound/interpolate_two/second/audio_path", set_i2_second_sound)
+  dispatcher.map("/sound/interpolate_two/play_again", play_again)
+  dispatcher.map("/sound/interpolate_two/save_folder", set_save_folder)
+  dispatcher.map("/sound/interpolate_two/save", save_audio)
+  dispatcher.map("/sound/stop", stop_playing)
 
   dispatcher.map("/set_alfa", set_alfa)
   
@@ -477,17 +535,19 @@ if __name__ == "__main__":
   client = SimpleUDPClient(args.sendIP, args.sendPORT)  # Create client
   print("Sending reports to {} {}".format(args.sendIP, args.sendPORT))
   if verbose:
-    print_plus_osc('Initiating audio...\n Available audio devices:')
+    print_plus_osc('Initiating audio...\n')
   
   audio_device_list = sd.query_devices()
   #Following is to generate the umenu in Max GUI
   client.send_message("/audio/devicelist", "clear")
   for i in range(len(audio_device_list)):
     client.send_message("/audio/devicelist", str(i)+' '+audio_device_list[i]['name'])
+  
   print(str(audio_device_list))
 
   print('Current audio device: {}'.format(sd.default.device))
-  print('Waiting osc message to load a model...')
+  client.send_message("/audio/io", '{} {}'.format(sd.default.device[0], sd.default.device[1]) )
+  print_plus_osc('Waiting osc message to load a model...')
   server.serve_forever()
 
 
