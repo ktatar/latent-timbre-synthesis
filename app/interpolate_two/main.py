@@ -444,6 +444,7 @@ def save_audio(address: str, *osc_arguments: List[Any]) -> None:
             #save the audio to a wav file
             librosa.output.write_wav(save_path, generated_audio, sr=sample_rate)
             print_plus_osc('Saved the last generated sound at the path: {}'.format(save_path))
+            break
 
 def set_alfa(address: str, *osc_arguments: List[Any]) -> None:
   global sound
@@ -455,8 +456,9 @@ def set_save_folder(address: str, *osc_arguments: List[Any]) -> None:
     global sound
 
     if os.path.exists(Path(osc_arguments[0])):
-        sound['interpolate_two']['save_folder'] = osc_arguments[0]
-        print_plus_osc('Save folder set to {}'.format(sound['interpolate_two']['save_folder']))
+      save_folder = Path(osc_arguments[0])
+      sound['interpolate_two']['save_folder'] = save_folder
+      print_plus_osc('Save folder set to {}'.format(str(save_folder.resolve())))
     else:
         warning_plus_osc('Save folder does not exist at the path {}'.format(osc_arguments[0]))    
 
