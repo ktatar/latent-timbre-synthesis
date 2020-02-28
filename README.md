@@ -30,7 +30,7 @@ We will install tensorflow using conda. If you have an NVIDIA GPU, please follow
 with GPU:
 `conda install tensorflow-gpu=2.0.0`
 
-only CPU:
+- only CPU:
 `conda install tensorflow=2.0.0`
 
 3- Python Libraries
