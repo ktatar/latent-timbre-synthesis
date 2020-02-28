@@ -136,7 +136,7 @@ def warning_plus_osc(my_warning):
 def initiate_dataset(address: str, *osc_arguments: List[Any]) -> None:
   global dataset
 
-  if os.path.exists(Path(osc_arguments[0])): 
+  if Path(osc_arguments[0]).exists(): 
     dataset = Path(osc_arguments[0])
     my_report = 'Dataset is set to: \n {}'.format(dataset.resolve())
     print(my_report)
@@ -155,13 +155,13 @@ def load_model(address: str, *osc_arguments: List[Any]) -> None:
   print_plus_osc('Current dataset path is {}'.format( str(dataset.resolve())))
   print_plus_osc('Received a request to load model from path {}'.format( str(dataset.resolve())))
   
-  if not os.path.exists(run_path):
+  if not run_path.exists():
     my_warning = 'Run path does not exist: \n {} \n Could not load the DL model'.format(str(run_path.resolve()))
     warning_plus_osc(my_warning)
     return
 
   config_path = run_path / 'config.ini'
-  if not os.path.exists(config_path):
+  if not config_path.exists():
     my_warning = 'Run path does not exist: \n {} \n Could not load the DL model'.format(config_path)
     warning_plus_osc(my_warning)
     return
@@ -225,19 +225,19 @@ def set_i2_first_sound(address: str, *osc_arguments: List[Any]) -> None:
   audio_path = my_audio / (file_name+'.wav')
   cqt_path = my_cqt / (file_name+'.npy')
 
-  if os.path.exists(audio_path) and os.path.exists(cqt_path): 
+  if audio_path.exists() and cqt_path.exists(): 
     sound['interpolate_two']['first']['name'] = file_name
-    sound['interpolate_two']['first']['audio_path'] = str(audio_path.resolve())
-    sound['interpolate_two']['first']['cqt_path'] = str(cqt_path.resolve())
+    sound['interpolate_two']['first']['audio_path'] = audio_path
+    sound['interpolate_two']['first']['cqt_path'] = cqt_path
     my_report = 'First sound is set to: \n {} \n at the path \n {}'.format( sound['interpolate_two']['first']['name'], sound['interpolate_two']['first']['audio_path'], sound['interpolate_two']['first']['cqt_path'])
     
     print_plus_osc(my_report)
-    client.send_message("/sound/interpolate_two/first/path",  sound['interpolate_two']['first']['audio_path'])
+    client.send_message("/sound/interpolate_two/first/path",  str(audio_path.resolve()))
     client.send_message("/sound/interpolate_two/first/name",  sound['interpolate_two']['first']['name'])
 
     #Load Audio 1 
     sound['interpolate_two']['first']['duration'] = librosa.get_duration(filename=audio_path)
-    sound['interpolate_two']['first']['CQT'] = np.load(os.path.join(my_cqt, sound['interpolate_two']['first']['name']+'.npy'))
+    sound['interpolate_two']['first']['CQT'] = np.load(my_cqt / (sound['interpolate_two']['first']['name']+'.npy'))
 
   else:
     my_warning = 'Could not set the first sound for interpolate_two. Either audio or CQT path do not exist. Received the following OSC message: \n {} \n generated the following audio path \n {} \n generated following CQT path \n {}'.format(osc_arguments[0], audio_path, cqt_path)
@@ -250,20 +250,20 @@ def set_i2_second_sound(address: str, *osc_arguments: List[Any]) -> None:
   audio_path = my_audio / (file_name+'.wav')
   cqt_path = my_cqt / (file_name+'.npy')
   
-  if os.path.exists(audio_path) and os.path.exists(cqt_path): 
+  if audio_path.exists() and cqt_path.exists(): 
     sound['interpolate_two']['second']['name'] = file_name
-    sound['interpolate_two']['second']['audio_path'] = str(audio_path.resolve())
-    sound['interpolate_two']['second']['cqt_path'] = str(cqt_path.resolve())
+    sound['interpolate_two']['second']['audio_path'] = audio_path
+    sound['interpolate_two']['second']['cqt_path'] = cqt_path
     my_report = 'Second sound is set to: \n {} \n at the path \n {}'.format(sound['interpolate_two']['second']['name'],sound['interpolate_two']['second']['audio_path'], sound['interpolate_two']['second']['cqt_path']  )
     
     print_plus_osc(my_report)
     
-    client.send_message("/sound/interpolate_two/second/path", sound['interpolate_two']['second']['audio_path'])
+    client.send_message("/sound/interpolate_two/second/path", str(audio_path.resolve()))
     client.send_message("/sound/interpolate_two/second/name", sound['interpolate_two']['second']['name'])   
 
     #Load Audio 1 
     sound['interpolate_two']['second']['duration'] = librosa.get_duration(filename=audio_path)
-    sound['interpolate_two']['second']['CQT'] = np.load(os.path.join(my_cqt, sound['interpolate_two']['second']['name']+'.npy'))
+    sound['interpolate_two']['second']['CQT'] = np.load(my_cqt / (sound['interpolate_two']['second']['name']+'.npy'))
 
   #If path does not exists  
   else:
@@ -437,7 +437,7 @@ def save_audio(address: str, *osc_arguments: List[Any]) -> None:
     while True:
         filename = 'generated_audio-{:05d}.wav'.format(count)
         save_path = sound['interpolate_two']['save_folder'] / filename 
-        if os.path.exists(save_path):
+        if save_path.exists():
             count += 1
             continue
         else:
@@ -455,7 +455,7 @@ def set_alfa(address: str, *osc_arguments: List[Any]) -> None:
 def set_save_folder(address: str, *osc_arguments: List[Any]) -> None:
     global sound
 
-    if os.path.exists(Path(osc_arguments[0])):
+    if Path(osc_arguments[0]).exists():
       save_folder = Path(osc_arguments[0])
       sound['interpolate_two']['save_folder'] = save_folder
       print_plus_osc('Save folder set to {}'.format(str(save_folder.resolve())))
