@@ -5,7 +5,7 @@
 #SBATCH --time=2-12:00      # time (DD-HH:MM)
 #SBATCH --output=%N-%j.out  # %N for node name, %j for jobID
 #SBATCH --mail-user=ktatar@sfu.ca
-#SBATCH --mail-type=BIN
+#SBATCH --mail-type=BEGIN
 #SBATCH --mail-type=END
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-type=REQUEUE
