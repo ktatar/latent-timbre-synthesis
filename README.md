@@ -49,6 +49,12 @@ For using the interpolate_two app
 
 - Install sounddevice for Audio IO in python
 `conda install -c conda-forge python-sounddevice`
+    
+    - If you get "Module not found" error after the  sounddevice installation:
+        - First try to close and open your terminal, and then run it again.
+        - If you still have the error, try this fix:
+            `pip uninstall sounddevice`
+            `pip install sounddevice`
 
 4- Max 8 Libraries
 
