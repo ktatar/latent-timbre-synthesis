@@ -20,6 +20,9 @@ Please open your terminal (Anaconda Command Prompt for Windows),
 
 `conda create -n lts python=3.7`
 
+- Activate your conda environment before continuing the following steps:
+`conda activate lts`
+
 2- Tensorflow
 We will install tensorflow using conda. If you have an NVIDIA GPU, please follow the GPU guide below. For all other hardware, please follow the CPU option. The code is compatible with both GPU, and CPU only; however training would take too long on CPU. I strongly recommend using a GPU if you plan to train new models. 
 
@@ -34,9 +37,6 @@ We will install tensorflow using conda. If you have an NVIDIA GPU, please follow
     `conda install tensorflow=2.0.0`
 
 3- Python Libraries
-
-- Activate your conda environment:
-`conda activate lts`
 
 - Install librosa for audio feature extraction
 `pip install librosa`
