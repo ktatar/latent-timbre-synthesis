@@ -291,7 +291,7 @@ def set_griffin_lim_iterations(address: str, *osc_arguments: List[Any]) -> None:
 
 def set_normalization(address: str, *osc_arguments: List[Any]) -> None:
   global normalize
-  batch_size = int(osc_arguments[0])
+  normalize = osc_arguments[0]
   client.send_message("/output/normalize", normalize) 
   if normalize:
     print_plus_osc('Output normalization is on.')
