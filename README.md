@@ -15,7 +15,7 @@ The training and the synthesis engines are working on Python. Currently, we have
 Download and install Anaconda for Python 3.7 for your os:
 https://www.anaconda.com/distribution/
 
-Create a new python 3.7 environment
+- Create a new python 3.7 environment
 Please open your terminal (Anaconda Command Prompt for Windows),
 
 `conda create -n lts python=3.7`
