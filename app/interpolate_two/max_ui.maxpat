@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 550.0, 201.0, 1282.0, 808.0 ],
+		"rect" : [ 122.0, 135.0, 1282.0, 808.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 1,
 		"default_fontsize" : 11.0,
@@ -1757,7 +1757,7 @@
 					"numoutlets" : 1,
 					"outlettype" : [ "jit_matrix" ],
 					"patching_rect" : [ 6.399999976158142, 10.124294668809746, 554.600000023841858, 47.375705331190254 ],
-					"pic" : "logo.png",
+					"pic" : "banner.png",
 					"presentation" : 1,
 					"presentation_rect" : [ 0.0, 0.0, 573.950012000000015, 49.028645225705333 ]
 				}
@@ -3096,7 +3096,7 @@
 				"box" : 				{
 					"fontname" : "Lucida Sans Typewriter ",
 					"id" : "obj-116",
-					"items" : [ "Microsoft", "Sound", "Mapper", "-", "Input", ",", "Microphone", "Array", "(Realtek(R)", "Au", ",", "Microsoft", "Sound", "Mapper", "-", "Output", ",", "Speakers", "(Realtek(R)", "Audio)" ],
+					"items" : "<empty>",
 					"maxclass" : "umenu",
 					"numinlets" : 1,
 					"numoutlets" : 3,
@@ -3242,7 +3242,7 @@
 				"box" : 				{
 					"fontname" : "Lucida Sans Typewriter ",
 					"id" : "obj-11",
-					"items" : [ "Microsoft", "Sound", "Mapper", "-", "Input", ",", "Microphone", "Array", "(Realtek(R)", "Au", ",", "Microsoft", "Sound", "Mapper", "-", "Output", ",", "Speakers", "(Realtek(R)", "Audio)" ],
+					"items" : "<empty>",
 					"maxclass" : "umenu",
 					"numinlets" : 1,
 					"numoutlets" : 3,
@@ -4945,7 +4945,7 @@
 					"presentation" : 1,
 					"presentation_rect" : [ 575.950012000000015, 308.156739811912189, 573.950012000000015, 133.200000405311584 ],
 					"ruler" : 0,
-					"setmode" : 4,
+					"setmode" : 3,
 					"setunit" : 1,
 					"vzoom" : 1.299999952316284,
 					"waveformcolor" : [ 0.701960784313725, 0.415686274509804, 0.886274509803922, 0.85 ]
@@ -4972,7 +4972,7 @@
 					"presentation_rect" : [ 575.950012000000015, 158.156739811912217, 573.950012000000015, 122.0 ],
 					"ruler" : 0,
 					"selectioncolor" : [ 0.113725, 0.580392, 0.737255, 1.0 ],
-					"setmode" : 2,
+					"setmode" : 3,
 					"setunit" : 2,
 					"ticks" : 8,
 					"vticks" : 0
@@ -4998,7 +4998,7 @@
 					"presentation_rect" : [ 575.950012000000015, 30.156739811912253, 573.950012000000015, 125.999999999999972 ],
 					"ruler" : -16,
 					"selectioncolor" : [ 0.113725, 0.580392, 0.737255, 1.0 ],
-					"setmode" : 2,
+					"setmode" : 3,
 					"setunit" : 2,
 					"ticks" : 8,
 					"vticks" : 0
@@ -5025,7 +5025,7 @@
 					"presentation_rect" : [ 575.950012000000015, 569.356740217223887, 573.950012000000015, 124.0 ],
 					"ruler" : 0,
 					"selectioncolor" : [ 0.113725, 0.580392, 0.737255, 1.0 ],
-					"setmode" : 2,
+					"setmode" : 3,
 					"setunit" : 2,
 					"ticks" : 8,
 					"vticks" : 0
@@ -5051,7 +5051,7 @@
 					"presentation_rect" : [ 575.950012000000015, 443.356740217223773, 573.950012000000015, 124.0 ],
 					"ruler" : -16,
 					"selectioncolor" : [ 0.113725, 0.580392, 0.737255, 1.0 ],
-					"setmode" : 2,
+					"setmode" : 3,
 					"setunit" : 2,
 					"ticks" : 8,
 					"vticks" : 0
@@ -7441,42 +7441,42 @@
 			}
  ],
 		"parameters" : 		{
-			"obj-62" : [ "live.text[3]", "live.text", 0 ],
 			"obj-208::obj-4" : [ "setname[1]", "Setname", 0 ],
-			"obj-205::obj-4" : [ "setname", "Setname", 0 ],
-			"obj-23" : [ "live.text[1]", "live.text", 0 ],
+			"obj-208::obj-113" : [ "pan[1]", "Pan", 0 ],
 			"obj-208::obj-116" : [ "gain[1]", "Gain", 0 ],
+			"obj-205::obj-113" : [ "pan", "Pan", 0 ],
+			"obj-23" : [ "live.text[1]", "live.text", 0 ],
+			"obj-205::obj-30" : [ "qlist", "Qlist", 0 ],
+			"obj-205::obj-4" : [ "setname", "Setname", 0 ],
+			"obj-208::obj-30" : [ "qlist[1]", "Qlist", 0 ],
+			"obj-291" : [ "number", "number", 0 ],
 			"obj-205::obj-116" : [ "gain", "Gain", 0 ],
 			"obj-208::obj-114" : [ "solo[1]", "Solo", 0 ],
-			"obj-205::obj-30" : [ "qlist", "Qlist", 0 ],
-			"obj-291" : [ "number", "number", 0 ],
-			"obj-208::obj-30" : [ "qlist[1]", "Qlist", 0 ],
-			"obj-63" : [ "live.text[2]", "live.text", 0 ],
-			"obj-205::obj-114" : [ "solo", "Solo", 0 ],
-			"obj-206::obj-24" : [ "output", "Output", 0 ],
+			"obj-62" : [ "live.text[3]", "live.text", 0 ],
 			"obj-205::obj-115" : [ "active", "Active", 0 ],
-			"obj-208::obj-113" : [ "pan[1]", "Pan", 0 ],
-			"obj-205::obj-113" : [ "pan", "Pan", 0 ],
+			"obj-205::obj-114" : [ "solo", "Solo", 0 ],
 			"obj-208::obj-115" : [ "active[1]", "Active", 0 ],
+			"obj-206::obj-24" : [ "output", "Output", 0 ],
+			"obj-63" : [ "live.text[2]", "live.text", 0 ],
 			"parameterbanks" : 			{
 
 			}
 ,
 			"parameter_overrides" : 			{
-				"obj-208::obj-116" : 				{
-					"parameter_longname" : "gain[1]"
+				"obj-208::obj-113" : 				{
+					"parameter_longname" : "pan[1]"
 				}
 ,
-				"obj-208::obj-114" : 				{
-					"parameter_longname" : "solo[1]"
+				"obj-208::obj-116" : 				{
+					"parameter_longname" : "gain[1]"
 				}
 ,
 				"obj-208::obj-30" : 				{
 					"parameter_longname" : "qlist[1]"
 				}
 ,
-				"obj-208::obj-113" : 				{
-					"parameter_longname" : "pan[1]"
+				"obj-208::obj-114" : 				{
+					"parameter_longname" : "solo[1]"
 				}
 ,
 				"obj-208::obj-115" : 				{
@@ -7512,7 +7512,7 @@
 				"implicit" : 1
 			}
 , 			{
-				"name" : "logo.png",
+				"name" : "banner.png",
 				"bootpath" : "D:/my_workspace/latent-timbre-synthesis/app/interpolate_two",
 				"patcherrelativepath" : ".",
 				"type" : "PNG",
@@ -7622,8 +7622,8 @@
 , 			{
 				"name" : "newobjYellow-1",
 				"default" : 				{
-					"accentcolor" : [ 0.82517, 0.78181, 0.059545, 1.0 ],
-					"fontsize" : [ 12.059008 ]
+					"fontsize" : [ 12.059008 ],
+					"accentcolor" : [ 0.82517, 0.78181, 0.059545, 1.0 ]
 				}
 ,
 				"parentstyle" : "",
@@ -7632,9 +7632,9 @@
 , 			{
 				"name" : "tatarism",
 				"default" : 				{
-					"fontname" : [ "Lucida Sans Typewriter " ],
 					"textcolor_inverse" : [ 0.862745, 0.870588, 0.878431, 1.0 ],
-					"editing_bgcolor" : [ 0.129411764705882, 0.137254901960784, 0.149019607843137, 1.0 ],
+					"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
+					"bgcolor" : [ 0.19771, 0.188048, 0.201856, 1.0 ],
 					"color" : [ 0.701961, 0.415686, 0.886275, 1.0 ],
 					"bgfillcolor" : 					{
 						"type" : "gradient",
@@ -7646,11 +7646,11 @@
 						"proportion" : 0.5
 					}
 ,
-					"bgcolor" : [ 0.19771, 0.188048, 0.201856, 1.0 ],
-					"textcolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-					"locked_bgcolor" : [ 0.129411764705882, 0.137254901960784, 0.149019607843137, 1.0 ],
 					"fontsize" : [ 11.0 ],
-					"elementcolor" : [ 0.589653, 0.589635, 0.589645, 1.0 ]
+					"fontname" : [ "Lucida Sans Typewriter " ],
+					"elementcolor" : [ 0.589653, 0.589635, 0.589645, 1.0 ],
+					"editing_bgcolor" : [ 0.129411764705882, 0.137254901960784, 0.149019607843137, 1.0 ],
+					"locked_bgcolor" : [ 0.129411764705882, 0.137254901960784, 0.149019607843137, 1.0 ]
 				}
 ,
 				"parentstyle" : "",

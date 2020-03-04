@@ -5,6 +5,7 @@
 **.out
 **__pycache__
 **.png
+!app/interpolate_two/banner.png
 **ckpt*
 **.jpg
 **.jpeg
