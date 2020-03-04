@@ -54,9 +54,9 @@ For using the interpolate_two app
         - First try to close and open your terminal, and then run it again.
         - If you still have the error, try this fix:
             
-        `pip uninstall sounddevice`
+            `pip uninstall sounddevice`
             
-        `pip install sounddevice`
+            `pip install sounddevice`
 
 4- Max 8 Libraries
 
