@@ -21,6 +21,7 @@ Please open your terminal (Anaconda Command Prompt for Windows),
 `conda create -n lts python=3.7`
 
 - Activate your conda environment before continuing the following steps:
+
 `conda activate lts`
 
 2- Tensorflow
@@ -31,23 +32,28 @@ We will install tensorflow using conda. If you have an NVIDIA GPU, please follow
 
 - Install tensorflow using conda:
     - with GPU:
+    
     `conda install tensorflow-gpu=2.0.0`
 
     - only CPU:
+    
     `conda install tensorflow=2.0.0`
 
 3- Python Libraries
 
 - Install librosa for audio feature extraction
+
 `pip install librosa`
 
 
 For using the interpolate_two app
 
 - Install python-osc for osc communication
+
 `pip install python-osc`
 
 - Install sounddevice for Audio IO in python
+
 `conda install -c conda-forge python-sounddevice`
     
     - If you get "Module not found" error after the  sounddevice installation:
