@@ -377,6 +377,8 @@ def generate_sound(address: str, *osc_arguments: List[Any]) -> None:
   if verbose: 
     print_plus_osc('Generating interpolations')
 
+  #ALFA multiplier matrix generation
+  #MAX sends a curve with 1000 samples. We create a function using this curve, and then we resample this function to match the size of number of audio frames
   #Get alfa
   alfa = sound['interpolate_two']['alfa']
   
