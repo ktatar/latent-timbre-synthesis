@@ -93,10 +93,15 @@ interpolate\_two has two engines, Max GUI and python engine. Python engine runs 
 ### The GUI in MAX 8
 
 A) Titles & Credits 
+
 B) Drop your dataset folder here 
+
 C) Drop your run folder here to load a trained model
+
 D) and E) Select two audio files from your dataset to choose excerpts. The file dropdown menu allows to select an audio file from the dataset. "Zoom to selection" sets the view to the selection area. Clicking crtl (or cmd on macos) and then dragging the mouse up&down on the waveform views applies zoom in & out.  
+
 F) The curve to apply interpolation and extrapolation, where x is the time and y sets the interpolation percentage for a frame. When both waveform views are zoomed to the selection, the x-axis of interpolation curve corresponds to the x-axis of the waveform. The interpolation curve view is a waveform~ object. The Vertical Zoom parameter in the inspector sets the maximum interpolation amount. The default maximum is 1.3; hence, [1.0,1.3] and [-1.0, -1.3] is the extrapolation regions. It is possible to extrapolate even more by changing the vertical zoom parameter; however, the higher amounts are likely to give audible distortions. 
+
 H) This section send messages to the python engine to handle output generation. "Generate & Play" initiates the python engine to synthesize a sound using the current interpolation curve and the audio selections. "Play Again" plays the previous generated sound, without going through the deep learning calculation. "STOP" immediately stops the audio coming out of the python engine. Normalize on/off button sets the audio output volume normalization on and off. when the normalization is set to on, the maximum of the generated audio is set 0.0 db. Phase iterations sets the number of iterations of the Fast Griffin-Lim algorithm. Higher number of iterations (max. 64) gives better results; however, the calculation takes significantly longer. The phase estimation algorithm takes the bottleneck of computational complexity of this framework. Still, the calculation of the audio takes 50% of the audio duration with phase iteration set to 1. That is, calculating a 2-second sound takes around 1-second on a latest, high-end computer. 
 
 I) This section handles the audio output specs of the audio engine of python server. The available audio devices are automatically send from python engine while opening. User can also click "Get Available Audio Devices for Python Engine" if a new audio device is plugged after initiating the python engine. Input and Output dropdown menus sets the audio i&o of the python engine. Lastly, "set previous files again" is for occasions where the python engine crashes. This button sets the audio excerpts in the python engine. 
