@@ -16,12 +16,10 @@ Download and install Anaconda for Python 3.7 for your os:
 https://www.anaconda.com/distribution/
 
 - Create a new python 3.7 environment
-Please open your terminal (Anaconda Command Prompt for Windows),
-
+Please open your terminal (Anaconda Command Prompt for Windows):
 `conda create -n lts python=3.7`
 
 - Activate your conda environment before continuing the following steps:
-
 `conda activate lts`
 
 2- Tensorflow
@@ -32,37 +30,32 @@ We will install tensorflow using conda. If you have an NVIDIA GPU, please follow
 
 - Install tensorflow using conda:
     - with GPU:
-    
     `conda install tensorflow-gpu=2.0.0`
 
     - only CPU:
-    
     `conda install tensorflow=2.0.0`
 
 3- Python Libraries
 
-- Install librosa for audio feature extraction
-
+- Install librosa for audio feature extraction:
 `pip install librosa`
 
 
 For using the interpolate_two app
 
-- Install python-osc for osc communication
-
+- Install python-osc for osc communication:
 `pip install python-osc`
 
 - Install sounddevice for Audio IO in python
-
 `conda install -c conda-forge python-sounddevice`
     
     - If you get "Module not found" error after the  sounddevice installation:
         - First try to close and open your terminal, and then run it again.
         - If you still have the error, try this fix:
             
-            `pip uninstall sounddevice`
-            
-            `pip install sounddevice`
+            ```python
+            pip uninstall sounddevice
+            pip install sounddevice```
 
 4- Max 8 Libraries
 
