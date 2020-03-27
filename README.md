@@ -111,5 +111,7 @@ I) This section handles the audio output specs of the audio engine of python ser
 You can easily set everything from where you left by clicking,
 
 1- The dataset message box under "Drop Dataset Folder"
+
 2- The run folder message box under "Drop Run Folder"
+
 3- "set previous audio files again" message box in the Python Audio section
