@@ -56,13 +56,13 @@ For using the interpolate_two app
 
 `conda install -c conda-forge python-sounddevice`
     
-    - If you get "Module not found" error after the  sounddevice installation:
-        - First try to close and open your terminal, and then run it again.
-        - If you still have the error, try this fix:
+  - If you get "Module not found" error after the  sounddevice installation:
+    - First try to close and open your terminal, and then run it again.
+      - If you still have the error, try this fix:
             
-            `pip uninstall sounddevice`
+        `pip uninstall sounddevice`
             
-            `pip install sounddevice`
+        `pip install sounddevice`
 
 4- Max 8 Libraries
 
@@ -80,15 +80,15 @@ The algorithm synthesizes the audio by calculating every audio frame using inver
 
 1- Open your terminal, and activate lts environment,
 
-`conda activate lts
+`conda activate lts`
 
 2- Change your working directory to the interpolate_two app
 
-`cd [my-latent-timbre-synthesis-master]\app\interpolate_two
+`cd [my-latent-timbre-synthesis-master]\app\interpolate_two`
 
 3- Run main.py
 
-`python main.py
+`python main.py`
 
 4- Open Max patch max\_ui.maxpat
 
