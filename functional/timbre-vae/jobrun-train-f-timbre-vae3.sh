@@ -16,6 +16,6 @@ source /home/$USER/tf2_gpu/bin/activate
 sleep 5
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$EBROOTCUDA/lib64:$EBROOTCUDNN/lib64
 
-python /home/ktatar/scratch/timbre-space/functional/timbre-vae/create_dataset.py --config /home/ktatar/scratch/timbre-space/functional/timbre-vae/default-cedar3.ini
+python /home/ktatar/scratch/latent-timbre-synthesis/functional/timbre-vae/create_dataset.py --config /home/ktatar/scratch/timbre-space/functional/timbre-vae/default-cedar3.ini
 wait
-python /home/ktatar/scratch/timbre-space/functional/timbre-vae/train.py --config /home/ktatar/scratch/timbre-space/functional/timbre-vae/default-cedar3.ini
+python /home/ktatar/scratch/latent-timbre-synthesis/functional/timbre-vae/train.py --config /home/ktatar/scratch/timbre-space/functional/timbre-vae/default-cedar3.ini
