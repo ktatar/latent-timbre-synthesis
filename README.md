@@ -98,6 +98,8 @@ interpolate\_two has two engines, Max GUI and python engine. Python engine runs 
 
 ### The GUI in MAX 8
 
+![alt text](https://gitlab.com/ktatar/latent-timbre-synthesis/-/raw/master/images/interpolate_two_ui.jpg "interpolate_two GUI")
+
 A) Titles & Credits 
 
 B) Drop your dataset folder here 
