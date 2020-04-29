@@ -23,6 +23,7 @@ Please open your terminal (Anaconda Command Prompt for Windows),
 - Activate your conda environment before continuing the following steps:
 
 `conda activate lts`
+    
     - If you have an issue with the command above on macos, try, 
         `source activate lts`
 
