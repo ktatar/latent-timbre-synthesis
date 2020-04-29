@@ -25,7 +25,7 @@ Please open your terminal (Anaconda Command Prompt for Windows),
 `conda activate lts`
     
     - If you have an issue with the command above on macos, try, 
-        `source activate lts`
+    `source activate lts`
 
 2- Tensorflow
 We will install tensorflow using conda. If you have an NVIDIA GPU, please follow the GPU guide below. For all other hardware, please follow the CPU option. The code is compatible with both GPU, and CPU only; however training would take too long on CPU. I strongly recommend using a GPU if you plan to train new models. 
