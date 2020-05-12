@@ -50,11 +50,7 @@ if config['dataset'].get('workspace') != None:
   workspace = Path(config['dataset'].get('workspace'))
 
 run_number = config['dataset'].getint('run_number')
-
-
-
 my_cqt = dataset / cqt_dataset
-
 if not my_cqt.exists():
     raise FileNotFoundError(my_cqt.resolve())
 

@@ -61,14 +61,14 @@ sound = {
     'first':{
       'name': '',
       'audio_path': '',
-      'duration': 0,
+      'duration': 0.0,
       'cqt_path':'',
       'CQT': np.empty([0])
     },
     'second':{
       'name': '',
       'audio_path': '',
-      'duration': 0,
+      'duration': 0.0,
       'cqt_path':'',
       'CQT': np.empty([0])
     },
@@ -305,7 +305,7 @@ def generate_sound(address: str, *osc_arguments: List[Any]) -> None:
     warning_plus_osc('Error: Generate sound function did not receive enough arguments ({}). Required number of arguments are 3: duration, audio_1_offset, audio_2_offset. Units are seconds.'.format(len(osc_arguments)))
     return
 
-  example_length = int(osc_arguments[0])
+  example_length = float(osc_arguments[0])
   if verbose:
     print_plus_osc('Interpolate two - duration set to {}'.format(example_length))
   
@@ -553,6 +553,3 @@ if __name__ == "__main__":
   client.send_message("/audio/io", '{} {}'.format(sd.default.device[0], sd.default.device[1]) )
   print_plus_osc('Waiting osc message to load a model...')
   server.serve_forever()
-
-
-  

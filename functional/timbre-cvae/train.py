@@ -9,8 +9,7 @@ import random
 import numpy as np
 
 import os, sys, argparse, time
-from termcolor import colored
-os.system('color')
+from pathlib import Path
 
 import librosa
 import configparser
@@ -41,20 +40,21 @@ n_bins = int(num_octaves * bins_per_octave)
 n_iter = config['audio'].getint('n_iter')
 
 #dataset
-dataset = config['dataset'].get('datapath')
+dataset = Path(config['dataset'].get('datapath'))
+if not dataset.exists():
+    raise FileNotFoundError(dataset.resolve())
+
 cqt_dataset = config['dataset'].get('cqt_dataset')
-workspace = config['dataset'].get('workspace')
+
+if config['dataset'].get('workspace') != None:
+  workspace = Path(config['dataset'].get('workspace'))
+
 run_number = config['dataset'].getint('run_number')
+my_cqt = dataset / cqt_dataset
+if not my_cqt.exists():
+    raise FileNotFoundError(my_cqt.resolve())
 
-if not os.path.exists(dataset):
-    raise FileNotFoundError
-    
-my_cqt = os.path.join(dataset, cqt_dataset)
-
-if not os.path.exists(my_cqt):
-    raise FileNotFoundError
-
-my_audio = os.path.join(dataset, 'audio')
+my_audio = dataset / 'audio'
     
 #Training configs
 epochs = config['training'].getint('epochs')
@@ -107,32 +107,34 @@ if not continue_training:
     run_id = run_number
     while True:
         try:
-            my_runs = os.path.join(dataset, desc)
-            workdir = os.path.join(my_runs, 'run-%03d' % (run_id)) 
+            my_runs = dataset / desc
+            run_name = 'run-{:03d}'.format(run_id)
+            workdir = my_runs / run_name 
             os.makedirs(workdir)
 
             break
         except OSError:
-            if os.path.isdir(workdir):
+            if workdir.is_dir():
                 run_id = run_id + 1
                 continue
             raise
 
-    config['dataset']['workspace'] = workdir
+    config['dataset']['workspace'] = str(workdir.resolve())
 else:
     workdir = config['dataset'].get('workspace')
 
-print(colored("Workspace: {}".format(workdir), 'magenta'))
+print("Workspace: {}".format(workdir))
 
 #create the dataset
-print(colored('creating the dataset...', 'magenta'))
+print('creating the dataset...')
 training_array = []
 new_loop = True
 
 for f in os.listdir(my_cqt): 
     if f.endswith('.npy'):
         print('adding-> %s' % f)
-        new_array = np.load(os.path.join(my_cqt,f))
+        file_path = my_cqt / f
+        new_array = np.load(file_path)
         if new_loop:
             training_array = new_array
             new_loop = False
@@ -140,11 +142,12 @@ for f in os.listdir(my_cqt):
             training_array = np.concatenate((training_array, new_array), axis=0)
 
 total_cqt = len(training_array)
-print(colored('Total number of CQT frames: {}'.format(total_cqt)), 'magenta')
+print('Total number of CQT frames: {}'.format(total_cqt))
 config['dataset']['total_frames'] = str(total_cqt)
 
-print(colored("saving initial configs...", 'magenta') )
-with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
+print("saving initial configs...")
+config_path = workdir / 'config.ini'
+with open(config_path, 'w') as configfile:
   config.write(configfile)
 
 if buffer_size_dataset:
@@ -161,106 +164,136 @@ class Sampling(layers.Layer):
     epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
     return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
-# Define encoder model.
-original_dim = n_bins
-original_inputs = tf.keras.Input(shape=(original_dim,), name='encoder_input')
-x = layers.Reshape((bins_per_octave//2, num_octaves*2, 1))(original_inputs)
-x = layers.Conv2D(initial_filters, kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
-if num_conv_layers>0:
-  for i in range(num_conv_layers):
-    x = layers.Conv2D(initial_filters*pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
-
-# need to know the shape of the network here for the decoder
-shape_before_flattening = tf.keras.backend.int_shape(x)
-
-#print("Shape before flattening: {}".format(shape_before_flattening))
-
-x = layers.Flatten()(x)
-if num_dense_layers > 0:
-  for i in range(num_dense_layers):
-    x = layers.Dense(dense_units//pow(dense_unit_divider,i), activation=mid_activations)(x)
-
-# Two outputs, latent mean and (log)variance
-z_mean = layers.Dense(latent_dim, name='z_mean')(x)
-z_log_var = layers.Dense(latent_dim, name='z_log_var')(x)
-z = Sampling()((z_mean, z_log_var))
-encoder = tf.keras.Model(inputs=original_inputs, outputs=z, name='encoder')
-encoder.summary()
-
-# Define decoder model.
-latent_inputs = tf.keras.Input(shape=(latent_dim,), name='z_sampling')
-# Expand
-if num_dense_layers>0:
-  x = layers.Dense(dense_units//pow(dense_unit_divider,num_dense_layers-1))(latent_inputs)
-  if num_dense_layers>1:
-    for i in range(num_dense_layers-1):
-      x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)), activation=mid_activations)(x)
-  x = layers.Dense(np.prod(shape_before_flattening[1:]), activation=mid_activations)(x)
-else:
-  x = layers.Dense(np.prod(shape_before_flattening[1:]))(latent_inputs)
-# reshape
-x = layers.Reshape(shape_before_flattening[1:])(x)
-# use Conv2DTranspose to reverse the conv layers from the encoder
-if num_conv_layers>0:
-  for i in range(num_conv_layers):
-    x = layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
-x = layers.Conv2DTranspose(1, kernel_size, padding='same', strides=(2, 2))(x)
-
-outputs = layers.Flatten()(x)
-decoder = tf.keras.Model(inputs=latent_inputs, outputs=outputs, name='decoder')
-decoder.summary()
-
-outputs = decoder(z)
-# Define VAE model.
-vae = tf.keras.Model(inputs=original_inputs, outputs=outputs, name='vae')
-vae.summary()
-
-if plot_model:
-  tf.keras.utils.plot_model(
-    vae,
-    to_file=os.path.join(workdir,'model_vae.jpg'),
-    show_shapes=True,
-    show_layer_names=True,
-    rankdir='TB',
-    expand_nested=True,
-    dpi=300
-  )
-
-  tf.keras.utils.plot_model(
-      encoder,
-      to_file=os.path.join(workdir,'model_encoder.jpg'),
-      show_shapes=True,
-      show_layer_names=True,
-      rankdir='TB',
-      expand_nested=True,
-      dpi=300
-  )
-
-  tf.keras.utils.plot_model(
-      decoder,
-      to_file=os.path.join(workdir,'model_decoder.jpg'),
-      show_shapes=True,
-      show_layer_names=True,
-      rankdir='TB',
-      expand_nested=True,
-      dpi=300
-  )
-
-# Add KL divergence regularization loss.
-kl_loss = - kl_beta * tf.reduce_mean(
-    z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1)
-vae.add_loss(kl_loss)
-
 # Train
-model_dir = os.path.join(workdir, "model")
-os.makedirs(model_dir, exist_ok=True)
+model_dir = workdir / "model"
+os.makedirs(model_dir,exist_ok=True)
 
-log_dir = os.path.join(workdir, 'logs')
+log_dir = workdir / 'logs'
 os.makedirs(log_dir, exist_ok=True)
+
+if not continue_training:
+  # Define encoder model.
+  original_dim = n_bins
+  original_inputs = tf.keras.Input(shape=(original_dim,), name='encoder_input')
+  x = layers.Reshape((bins_per_octave//2, num_octaves*2, 1))(original_inputs)
+  x = layers.Conv2D(initial_filters, kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
+  if num_conv_layers>0:
+    for i in range(num_conv_layers):
+      x = layers.Conv2D(initial_filters*pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
+
+  # need to know the shape of the network here for the decoder
+  shape_before_flattening = tf.keras.backend.int_shape(x)
+
+  #print("Shape before flattening: {}".format(shape_before_flattening))
+
+  x = layers.Flatten()(x)
+  if num_dense_layers > 0:
+    for i in range(num_dense_layers):
+      x = layers.Dense(dense_units//pow(dense_unit_divider,i), activation=mid_activations)(x)
+
+  # Two outputs, latent mean and (log)variance
+  z_mean = layers.Dense(latent_dim, name='z_mean')(x)
+  z_log_var = layers.Dense(latent_dim, name='z_log_var')(x)
+  z = Sampling()((z_mean, z_log_var))
+  encoder = tf.keras.Model(inputs=original_inputs, outputs=z, name='encoder')
+  encoder.summary()
+
+  # Define decoder model.
+  latent_inputs = tf.keras.Input(shape=(latent_dim,), name='z_sampling')
+  # Expand
+  if num_dense_layers>0:
+    x = layers.Dense(dense_units//pow(dense_unit_divider,num_dense_layers-1))(latent_inputs)
+    if num_dense_layers>1:
+      for i in range(num_dense_layers-1):
+        x = layers.Dense((dense_units//pow(dense_unit_divider,num_dense_layers-1))*pow(dense_unit_divider,(i+1)), activation=mid_activations)(x)
+    x = layers.Dense(np.prod(shape_before_flattening[1:]), activation=mid_activations)(x)
+  else:
+    x = layers.Dense(np.prod(shape_before_flattening[1:]))(latent_inputs)
+  # reshape
+  x = layers.Reshape(shape_before_flattening[1:])(x)
+  # use Conv2DTranspose to reverse the conv layers from the encoder
+  if num_conv_layers>0:
+    for i in range(num_conv_layers):
+      x = layers.Conv2DTranspose(initial_filters*pow(2,num_conv_layers)//pow(2,(i+1)), kernel_size, padding='same', activation=mid_activations, strides=(2, 2))(x)
+  x = layers.Conv2DTranspose(1, kernel_size, padding='same', strides=(2, 2))(x)
+
+  outputs = layers.Flatten()(x)
+  decoder = tf.keras.Model(inputs=latent_inputs, outputs=outputs, name='decoder')
+  decoder.summary()
+
+  outputs = decoder(z)
+  # Define VAE model.
+  vae = tf.keras.Model(inputs=original_inputs, outputs=outputs, name='vae')
+  vae.summary()
+
+  if plot_model:
+    tf.keras.utils.plot_model(
+      vae,
+      to_file= workdir.joinpath('model_vae.jpg'),
+      show_shapes=True,
+      show_layer_names=True,
+      rankdir='TB',
+      expand_nested=True,
+      dpi=300
+    )
+
+    tf.keras.utils.plot_model(
+        encoder,
+        to_file= workdir.joinpath('model_encoder.jpg'),
+        show_shapes=True,
+        show_layer_names=True,
+        rankdir='TB',
+        expand_nested=True,
+        dpi=300
+    )
+
+    tf.keras.utils.plot_model(
+        decoder,
+        to_file=workdir.joinpath('model_decoder.jpg'),
+        show_shapes=True,
+        show_layer_names=True,
+        rankdir='TB',
+        expand_nested=True,
+        dpi=300
+    )
+
+  # Add KL divergence regularization loss.
+  kl_loss = - kl_beta * tf.reduce_mean(
+      z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1)
+  vae.add_loss(kl_loss)
+
+  if learning_schedule:
+    learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(learning_rate*100,
+        decay_steps=int(epochs*0.8),
+        decay_rate=0.96,
+        staircase=True)
+
+  optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=adam_beta_1, beta_2=adam_beta_2)
+
+  vae.compile(optimizer, 
+    loss=tf.keras.losses.MeanSquaredError())
+
+else: 
+  #load the model
+  my_model_path = workdir.joinpath('model','mymodel_last.h5')
+
+  with tf.keras.utils.CustomObjectScope({'Sampling': Sampling}):
+    vae = tf.keras.models.load_model(my_model_path)
+  vae.summary()
+
+  # create Encoder model
+  encoder = tf.keras.Model(inputs = vae.input, outputs = [vae.get_layer("z_mean").output, vae.get_layer("z_log_var").output], name='encoder')
+  encoder.summary()
+
+  # create Decoder model
+  decoder = tf.keras.Model(inputs = vae.get_layer('decoder').input, outputs = vae.get_layer('decoder').output, name='decoder')
+  decoder.summary()
+
+modelpath = model_dir.joinpath('mymodel_last.h5')
 
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(
-      filepath=os.path.join(model_dir,'mymodel_last.h5'),
+      filepath=str(modelpath),
       # Path where to save the model
       # The two parameters below mean that we will overwrite
       # the current checkpoint if and only if
@@ -281,40 +314,28 @@ callbacks = [
       histogram_freq=1)
 ]
 
-if learning_schedule:
-  learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(
-    learning_rate*100,
-    decay_steps=int(epochs*0.8),
-    decay_rate=0.96,
-    staircase=True)
-
-optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=adam_beta_1, beta_2=adam_beta_2)
-
-vae.compile(optimizer, 
-  loss=tf.keras.losses.MeanSquaredError())
-
-history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks, verbose=verbose)
+history = vae.fit(training_array, training_array, epochs=epochs, batch_size=batch_size, callbacks=callbacks)
 
 print('\nhistory dict:', history.history)
 
-with open(os.path.join(workdir,'my_history.json'), 'w') as json_file:
+with open(workdir.joinpath('my_history.json'), 'w') as json_file:
   json.dump(history.history, json_file)
 
-print(colored("Finished training...", 'magenta'))
+print("Finished training...")
 end_time = time.time()
 config['extra']['end'] = time.asctime( time.localtime(end_time) )
 time_elapsed = end_time - start_time
 config['extra']['time_elapsed'] = str(time_elapsed)
 config['extra']['total_epochs'] = str(len(history.history['loss']))
-with open(os.path.join(workdir,'config.ini'), 'w') as configfile:
+with open(workdir.joinpath('config.ini'), 'w') as configfile:
   config.write(configfile)
 
 # Generate examples 
-print(colored("Generating examples...", 'magenta'))
-my_examples_folder = os.path.join(workdir, 'audio_examples')
+print("Generating examples...")
+my_examples_folder = workdir.joinpath('audio_examples')
 for f in os.listdir(my_audio):
   print("Examples for {}".format(os.path.splitext(f)[0])) 
-  file_path = os.path.join(my_audio,f) 
+  file_path = my_audio.joinpath(f) 
   my_file_duration = librosa.get_duration(filename=file_path)
   my_offset = random.randint(0, int(my_file_duration)-example_length)
   s, fs = librosa.load(file_path, duration=example_length, offset=my_offset, sr=None)
@@ -334,7 +355,7 @@ for f in os.listdir(my_audio):
   test_dataset = tf.data.Dataset.from_tensor_slices(my_array).batch(batch_size).prefetch(AUTOTUNE)
   output = tf.constant(0., dtype='float32', shape=(1,n_bins))
 
-  print(colored("Working on regenerating cqt magnitudes with the DL model", 'magenta') )
+  print("Working on regenerating cqt magnitudes with the DL model")
   for step, x_batch_train in enumerate(test_dataset):
     reconstructed = vae(x_batch_train)
     output = tf.concat([output, reconstructed], 0)
@@ -345,24 +366,25 @@ for f in os.listdir(my_audio):
 
   if normalize_examples:
     output_inv_32 = librosa.util.normalize(output_inv_32)  
-  print(colored("Saving audio files...", 'magenta'))
-  my_audio_out_fold = os.path.join(my_examples_folder, os.path.splitext(f)[0])
+  print("Saving audio files...")
+  my_audio_out_fold = my_examples_folder.joinpath(os.path.splitext(f)[0])
   os.makedirs(my_audio_out_fold,exist_ok=True)
-  librosa.output.write_wav(os.path.join(my_audio_out_fold,'original.wav'),
-                           s, fs)
-  librosa.output.write_wav(os.path.join(my_audio_out_fold,'original-icqt+gL.wav'),
-                           y_inv_32, fs)
-  librosa.output.write_wav(os.path.join(my_audio_out_fold,'VAE-output+gL.wav'),
-                           output_inv_32, fs)
+  librosa.output.write_wav(my_audio_out_fold.joinpath('original.wav'),
+                           s, sample_rate)
+  librosa.output.write_wav(my_audio_out_fold.joinpath('original-icqt+gL.wav'),
+                           y_inv_32, sample_rate)
+  librosa.output.write_wav(my_audio_out_fold.joinpath('VAE-output+gL.wav'),
+                           output_inv_32, sample_rate)
 
 #Generate a plot for loss 
-print(colored("Generating loss plot...", 'magenta'))
+print("Generating loss plot...")
 history_dict = history.history
 fig = plt.figure()
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.ylim(0.,0.01)
 plt.plot(history_dict['loss'])
-fig.savefig(os.path.join(workdir,'my_history_plot.pdf'), dpi=300)
+fig.savefig(workdir.joinpath('my_history_plot.pdf'), dpi=300)
 
-print(colored('bye...', 'magenta'))
+
+print('bye...')

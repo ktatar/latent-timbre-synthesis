@@ -1,6 +1,34 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+
+'''
+generate_interpolations uses two audio excerpts, and then the script generates the interpolations using a constant interpolation percentage. The script generates different outputs for an interpolation percentage range of [-1.5, 1.5] with a step size of 0.1
+
+In terms of selecting the audio excerpt, the script has two main parts. The first part applies interpolation generation loop to a fixed audio excerpt that is set within the config file. Let call this one interpolation-fixed. The second half of the script generates interpolations by selecting a random audio excerpt from the whole dataset, but it still uses the example_length in the config file as a duration. Let's call this one interpolation-random. There is the following section in the config file:
+
+ 
+[extra]
+normalize_examples = False -> audio volume normalization
+example_length = 30 -> the length of the excerpt, must be smaller than the shortest audio file in the dataset. Otherwise, you may end up with errors.
+plot_model = False 
+
+#First audio excerpt for the interpolation-fixed
+
+interpolations_audio_1 = 05 Sculptor.wav
+audio_1_offset = 75
+
+#Second audio excerpt for the interpolation-fixed
+
+interpolations_audio_2 = 05 Sculptor.wav
+audio_2_offset = 118
+
+#The number of interpolations-random generation. For each iteration, the algorithm generates a folder of interpolations using two random excerpts
+
+num_random_interpolations = 4
+
+'''
+
 import tensorflow as tf
 from tensorflow.keras import layers
 
