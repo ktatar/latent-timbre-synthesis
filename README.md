@@ -23,6 +23,9 @@ Please open your terminal (Anaconda Command Prompt for Windows),
 - Activate your conda environment before continuing the following steps:
 
 `conda activate lts`
+    
+If you have an issue with the command above on macos, try: 
+`source activate lts`
 
 2- Tensorflow
 We will install tensorflow using conda. If you have an NVIDIA GPU, please follow the GPU guide below. For all other hardware, please follow the CPU option. The code is compatible with both GPU, and CPU only; however training would take too long on CPU. I strongly recommend using a GPU if you plan to train new models. 
@@ -83,6 +86,13 @@ The algorithm synthesizes the audio by calculating every audio frame using inver
 `conda activate lts`
 
 2- Change your working directory to the interpolate_two app
+
+In the code below, change the [my-latent-timbre-synthesis-master] section to the path of the latent-timbre-synthesis-master folder on your computer. 
+You can find that path by,
+
+- On Windows: hold shift and right-click on the folder, and then select "copy as path"
+- On Mac: right-click on the folder, hold alt (option) key and select "Copy ... as pathname"
+- On Linux: if you can use linux, you got this (:
 
 `cd [my-latent-timbre-synthesis-master]\app\interpolate_two`
 
