@@ -108,16 +108,8 @@ encoder.summary()
 decoder = tf.keras.Model(inputs = trained_model.get_layer('decoder').input, outputs = trained_model.get_layer('decoder').output, name='decoder')
 decoder.summary()
 
-#create the dataset
-print('creating the dataset...')
-training_array = []
-new_loop = True
-remaining = len(my_cqt)
-
 #Generate latent vectors for all cqt files
 remaining = len(os.listdir(my_cqt))
-my_files = os.listdir(my_cqt)
-my_files = my_files[:3]
 new_loop = True
 audio_all_latent_vecs_mean = []
 audio_all_latent_vecs_log_var = []
