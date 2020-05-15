@@ -65,20 +65,21 @@ n_bins = int(num_octaves * bins_per_octave)
 n_iter = config['audio'].getint('n_iter')
 
 #dataset
-dataset = config['dataset'].get('datapath')
-if args.dataset != None:
-  dataset = args.dataset
+dataset = Path(config['dataset'].get('datapath'))
+if not dataset.exists():
+    raise FileNotFoundError(dataset.resolve())
 
 cqt_dataset = config['dataset'].get('cqt_dataset')
-my_cqt = os.path.join(dataset, cqt_dataset)
-my_audio = os.path.join(dataset, 'audio')
 
-if not os.path.exists(dataset):
-    raise FileNotFoundError('Dataset folder does not exist: {}'.format(dataset))
+if config['dataset'].get('workspace') != None:
+  workspace = Path(config['dataset'].get('workspace'))
 
-if not os.path.exists(my_cqt):
-    raise FileNotFoundError('CQT folder does not exist: {}'.format(my_cqt))
+run_number = config['dataset'].getint('run_number')
+my_cqt = dataset / cqt_dataset
+if not my_cqt.exists():
+    raise FileNotFoundError(my_cqt.resolve())
 
+my_audio = dataset / 'audio'
 
 #Model configs
 try:
