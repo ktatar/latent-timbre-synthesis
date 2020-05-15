@@ -150,7 +150,7 @@ print("audio_all_latent_vecs_mean: ", audio_all_latent_vecs_mean.shape)
 
 tsne = TSNE(n_components=2, n_iter=5000, verbose=1)
 Z_tsne = tsne.fit_transform(audio_all_latent_vecs_mean)
-np.save(workspace.joinpath('Z_tsne-scatter.npy'),Z_tsne)\
+np.save(workspace.joinpath('Z_tsne-scatter.npy'), Z_tsne)
 np.save(workspace.joinpath('num_frames_per_file.npy'), num_frames_per_file)
 Z_tsne_x = Z_tsne[:,0]
 Z_tsne_y = Z_tsne[:,1]
