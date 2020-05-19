@@ -10,3 +10,4 @@
 **.jpg
 **.jpeg
 !images/*.jpg
+**/utils/lspace-vis-bhtsne
