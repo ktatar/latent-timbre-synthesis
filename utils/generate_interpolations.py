@@ -289,6 +289,7 @@ for my_idx in range(num_random_interpolations):
         audio_1_offset_frames = librosa.time_to_samples(audio_1_offset, sr=sample_rate)//hop_length
     else:
         example_length = audio_1_duration
+        audio_1_offset = 0
         audio_1_offset_frames = 0
         duration_frames = librosa.time_to_samples(example_length, sr=sample_rate)//hop_length
 
@@ -305,6 +306,7 @@ for my_idx in range(num_random_interpolations):
         audio_2_offset_frames = librosa.time_to_samples(audio_2_offset, sr=sample_rate)//hop_length
     else:
         example_length = audio_2_duration
+        audio_2_offset = 0
         audio_2_offset_frames = 0
         duration_frames = librosa.time_to_samples(example_length, sr=sample_rate)//hop_length
 
