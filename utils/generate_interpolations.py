@@ -282,14 +282,16 @@ for my_idx in range(num_random_interpolations):
 
     #Load Audio 1 
     audio_1 = my_records[random.randint(0, len(my_records)-1)]
+    print("Audio 1: {}".format(audio_1))
     audio_1_path = my_audio.joinpath(audio_1)
     audio_1_duration = librosa.get_duration(filename=audio_1_path)
     if int(audio_1_duration) > example_length:
         if int(audio_1_duration-example_length) > 0:
             audio_1_offset = random.randint(0, int(audio_1_duration-example_length))
+            audio_1_offset_frames = librosa.time_to_samples(audio_1_offset, sr=sample_rate)//hop_length
         else:
             audio_1_offset = 0
-        audio_1_offset_frames = librosa.time_to_samples(audio_1_offset, sr=sample_rate)//hop_length
+            audio_1_offset_frames = 0
     else:
         example_length = audio_1_duration
         audio_1_offset = 0
@@ -302,14 +304,16 @@ for my_idx in range(num_random_interpolations):
 
     #Load audio 2
     audio_2 =  my_records[random.randint(0, len(my_records)-1)]
+    print("Audio 2: {}".format(audio_2))
     audio_2_path = my_audio.joinpath(audio_2)
     audio_2_duration = librosa.get_duration(filename=audio_2_path)
     if audio_2_duration > example_length:
         if int(audio_2_duration-example_length) > 0:
             audio_2_offset = random.randint(0, int(audio_2_duration-example_length))
+            audio_2_offset_frames = librosa.time_to_samples(audio_2_offset, sr=sample_rate)//hop_length
         else:
             audio_2_offset = 0
-        audio_2_offset_frames = librosa.time_to_samples(audio_2_offset, sr=sample_rate)//hop_length
+            audio_2_offset_frames = 0 
     else:
         example_length = audio_2_duration
         audio_2_offset = 0
