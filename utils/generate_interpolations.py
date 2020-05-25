@@ -287,7 +287,7 @@ for my_idx in range(num_random_interpolations):
     if audio_1_duration > example_length:
         audio_1_offset = random.randint(0, int(audio_1_duration)-example_length)
         audio_1_offset_frames = librosa.time_to_samples(audio_1_offset, sr=sample_rate)//hop_length
-    elif audio_1_duration < example_length:
+    else:
         example_length = audio_1_duration
         audio_1_offset_frames = 0
         duration_frames = librosa.time_to_samples(example_length, sr=sample_rate)//hop_length
@@ -303,7 +303,7 @@ for my_idx in range(num_random_interpolations):
     if audio_2_duration > example_length:
         audio_2_offset = random.randint(0, int(audio_2_duration)-example_length)
         audio_2_offset_frames = librosa.time_to_samples(audio_2_offset, sr=sample_rate)//hop_length
-    elif audio_2_duration < example_length:
+    else:
         example_length = audio_2_duration
         audio_2_offset_frames = 0
         duration_frames = librosa.time_to_samples(example_length, sr=sample_rate)//hop_length
