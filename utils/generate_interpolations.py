@@ -36,6 +36,8 @@ import random
 import numpy as np
 
 import os, sys, argparse, time
+from pathlib import Path
+
 import librosa
 import pdb
 import configparser
@@ -47,9 +49,9 @@ parser.add_argument('--dataset', type=str, help='path to the dataset directory')
 args = parser.parse_args()
 
 #Get configs
-run_path = args.dir
+run_path = Path(args.dir)
 config = configparser.ConfigParser(allow_no_value=True)
-config_path = os.path.join(run_path, 'config.ini')
+config_path = run_path.joinpath('config.ini')
 try: 
   config.read(config_path)
 except FileNotFoundError:
@@ -66,6 +68,9 @@ n_iter = config['audio'].getint('n_iter')
 
 #dataset
 dataset = Path(config['dataset'].get('datapath'))
+if args.dataset is not None:
+    dataset = Path(args.dataset)
+
 if not dataset.exists():
     raise FileNotFoundError(dataset.resolve())
 
@@ -96,10 +101,31 @@ batch_size = config['training'].getint('batch_size')
 example_length = config['extra'].getint('example_length')
 normalize_examples = config['extra'].getboolean('normalize_examples')
 
+# check if all required info is given in config
+fixed_interpolations = True
 interpolations_audio_1 = config['extra'].get('interpolations_audio_1')
-audio_1_offset = config['extra'].getint('audio_1_offset')
 interpolations_audio_2 = config['extra'].get('interpolations_audio_2')
-audio_2_offset = config['extra'].getint('audio_2_offset')
+
+if interpolations_audio_1 is '':
+    print("interpolations_audio_1 is not set.\\")
+    fixed_interpolations = False
+if interpolations_audio_2 is '':
+    print("interpolations_audio_1 is not set.\\")
+    fixed_interpolations = False
+
+if fixed_interpolations is True:
+    interpolations_audio_1 = Path(interpolations_audio_1)
+    if not interpolations_audio_1.exists():
+        print("interpolations_audio_1 cannot be found at the path {}".format(interpolations_audio_1))
+        fixed_interpolations = False
+    audio_1_offset = config['extra'].getint('audio_1_offset')
+    
+    interpolations_audio_2 = Path(interpolations_audio_2)
+    if not interpolations_audio_2.exists():
+        print("interpolations_audio_2 cannot be found at the path {}".format(interpolations_audio_2))
+        fixed_interpolations = False 
+    audio_2_offset = config['extra'].getint('audio_2_offset')
+
 num_random_interpolations = config['extra'].getint('num_random_interpolations')
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
@@ -116,7 +142,7 @@ class Sampling(layers.Layer):
     return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
 #load the model
-my_model_path = os.path.join(os.path.join(run_path, 'model'),'mymodel_last.h5')
+my_model_path = run_path.joinpath('model').joinpath('mymodel_last.h5')
 
 with tf.keras.utils.CustomObjectScope({'Sampling': Sampling}):
   trained_model = tf.keras.models.load_model(my_model_path)
@@ -131,119 +157,123 @@ encoder.summary()
 decoder = tf.keras.Model(inputs = trained_model.get_layer('decoder').input, outputs = trained_model.get_layer('decoder').output, name='decoder')
 decoder.summary()
 
-
+original_example_length = example_length
 duration_frames = librosa.time_to_samples(example_length, sr=sample_rate)//hop_length
 
-# Interpolations of selected sections
-print('Generating interpolations between fixed-sections')
-my_interpolations_folder = os.path.join(run_path, 'audio_examples_interpolations')
-my_fixed_interpolations_folder = os.path.join(my_interpolations_folder, 'fixed')
-os.makedirs(my_fixed_interpolations_folder,exist_ok = True)
 
-print('loading audio and CQT matrixes')
 
-#Load Audio 1 
-audio_1 = interpolations_audio_1
-audio_1_path = os.path.join(my_audio, audio_1)
-audio_1_offset_frames = librosa.time_to_samples(audio_1_offset, sr=sample_rate)//hop_length
-my_file_duration = librosa.get_duration(filename=audio_1_path)
+# Interpolations of selected sections  
 
-s_1, fs_1 = librosa.load(audio_1_path, duration=example_length, offset=audio_1_offset, sr=None)
-librosa.output.write_wav(os.path.join(my_fixed_interpolations_folder,'original_1.wav'),
-                           s_1, fs_1)
+if fixed_interpolations:
+    print('Generating interpolations between fixed-sections')
+    my_interpolations_folder = run_path.joinpath('audio_examples_interpolations')
+    my_fixed_interpolations_folder = my_interpolations_folder.joinpath('fixed')
+    os.makedirs(my_fixed_interpolations_folder,exist_ok = True)
 
-#Load audio 2
-audio_2 = interpolations_audio_2
-audio_2_path = os.path.join(my_audio, audio_2)
-audio_2_offset_frames = librosa.time_to_samples(audio_2_offset, sr=sample_rate)//hop_length
-my_file_duration = librosa.get_duration(filename=audio_2_path)
+    print('loading audio and CQT matrixes')
 
-s_2, fs_2 = librosa.load(audio_2_path, duration=example_length, offset=audio_2_offset, sr=None)
-librosa.output.write_wav(os.path.join(my_fixed_interpolations_folder,'original_2.wav'),
-                           s_2, fs_2)
+    #Load Audio 1 
+    audio_1 = Path(interpolations_audio_1)
+    audio_1_path = my_audio.joinpath(audio_1)
+    audio_1_offset_frames = librosa.time_to_samples(audio_1_offset, sr=sample_rate)//hop_length
+    my_file_duration = librosa.get_duration(filename=audio_1_path)
 
-#Load audio 1 CQTs
-cqt_audio_1 = np.load(os.path.join(my_cqt,os.path.splitext(audio_1)[0]+'.npy'))
-C_1 = cqt_audio_1[audio_1_offset_frames:(audio_1_offset_frames+duration_frames)]
-print('Generating VAE-output+gL_1.wav')
-y_inv_audio_1 = librosa.griffinlim_cqt(np.transpose(C_1), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+    s_1, fs_1 = librosa.load(audio_1_path, duration=example_length, offset=audio_1_offset, sr=None)
+    librosa.output.write_wav(my_fixed_interpolations_folder.joinpath('original_1.wav'),
+                               s_1, fs_1)
 
-#write original magnitude response +phase estimation
-librosa.output.write_wav(os.path.join(my_fixed_interpolations_folder,'VAE-output+gL_1.wav'),
-                           y_inv_audio_1, sample_rate)
+    #Load audio 2
+    audio_2 = Path(interpolations_audio_2)
+    audio_2_path = my_audio.joinpath(audio_2)
+    audio_2_offset_frames = librosa.time_to_samples(audio_2_offset, sr=sample_rate)//hop_length
+    my_file_duration = librosa.get_duration(filename=audio_2_path)
 
-#Load audio 2 CQTs
-cqt_audio_2 = np.load(os.path.join(my_cqt,os.path.splitext(audio_2)[0]+'.npy'))
-C_2 = cqt_audio_2[audio_2_offset_frames:(audio_2_offset_frames+duration_frames)]
-print('Generating VAE-output+gL_2.wav')
-y_inv_audio_2 = librosa.griffinlim_cqt(np.transpose(C_2), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+    s_2, fs_2 = librosa.load(audio_2_path, duration=example_length, offset=audio_2_offset, sr=None)
+    librosa.output.write_wav(my_fixed_interpolations_folder.joinpath('original_2.wav'),
+                               s_2, fs_2)
 
-#write original magnitude response +phase estimation
-librosa.output.write_wav(os.path.join(my_fixed_interpolations_folder,'VAE-output+gL_2.wav'),
-                           y_inv_audio_2, sample_rate)
+    #Load audio 1 CQTs
+    cqt_audio_1 = np.load(my_cqt.joinpath(audio_1_path.stem+'.npy'))
+    C_1 = cqt_audio_1[audio_1_offset_frames:(audio_1_offset_frames+duration_frames)]
+    print('Generating VAE-output+gL_1.wav')
+    y_inv_audio_1 = librosa.griffinlim_cqt(np.transpose(C_1), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
 
-#Generate latent vectors for audio_1
-audio_1_dataset = tf.data.Dataset.from_tensor_slices(C_1).batch(batch_size).prefetch(AUTOTUNE)
-latent_vecs_mean = tf.constant(0., dtype='float32', shape=(1,latent_dim))
-latent_vecs_log_var = tf.constant(0., dtype='float32', shape=(1,latent_dim))
+    #write original magnitude response +phase estimation
+    librosa.output.write_wav(my_fixed_interpolations_folder.joinpath('VAE-output+gL_1.wav'),
+                               y_inv_audio_1, sample_rate)
 
-for step, x_batch_train in enumerate(audio_1_dataset):
-    mean, log_var = encoder(x_batch_train, training=False)
-    latent_vecs_mean = tf.concat([latent_vecs_mean, mean], 0)
-    latent_vecs_log_var = tf.concat([latent_vecs_log_var, log_var], 0)
+    #Load audio 2 CQTs
+    cqt_audio_2 = np.load(my_cqt.joinpath(audio_2_path.stem+'.npy'))
+    C_2 = cqt_audio_2[audio_2_offset_frames:(audio_2_offset_frames+duration_frames)]
+    print('Generating VAE-output+gL_2.wav')
+    y_inv_audio_2 = librosa.griffinlim_cqt(np.transpose(C_2), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
 
-audio_1_latent_vecs_mean = latent_vecs_mean[1:]
-audio_1_latent_vecs_log_var = latent_vecs_log_var[1:]
+    #write original magnitude response +phase estimation
+    librosa.output.write_wav(my_fixed_interpolations_folder.joinpath('VAE-output+gL_2.wav'),
+                               y_inv_audio_2, sample_rate)
 
-#Generate latent vectors for audio_2
-audio_2_dataset = tf.data.Dataset.from_tensor_slices(C_2).batch(batch_size).prefetch(AUTOTUNE)
-latent_vecs_mean = tf.constant(0., dtype='float32', shape=(1,latent_dim))
-latent_vecs_log_var = tf.constant(0., dtype='float32', shape=(1,latent_dim))
+    #Generate latent vectors for audio_1
+    audio_1_dataset = tf.data.Dataset.from_tensor_slices(C_1).batch(batch_size).prefetch(AUTOTUNE)
+    latent_vecs_mean = tf.constant(0., dtype='float32', shape=(1,latent_dim))
+    latent_vecs_log_var = tf.constant(0., dtype='float32', shape=(1,latent_dim))
 
-for step, x_batch_train in enumerate(audio_2_dataset):
-    mean, log_var = encoder(x_batch_train, training=False)
-    latent_vecs_mean = tf.concat([latent_vecs_mean, mean], 0)
-    latent_vecs_log_var = tf.concat([latent_vecs_log_var, log_var], 0)
+    for step, x_batch_train in enumerate(audio_1_dataset):
+        mean, log_var = encoder(x_batch_train, training=False)
+        latent_vecs_mean = tf.concat([latent_vecs_mean, mean], 0)
+        latent_vecs_log_var = tf.concat([latent_vecs_log_var, log_var], 0)
 
-audio_2_latent_vecs_mean = latent_vecs_mean[1:]
-audio_2_latent_vecs_log_var = latent_vecs_log_var[1:]
+    audio_1_latent_vecs_mean = latent_vecs_mean[1:]
+    audio_1_latent_vecs_log_var = latent_vecs_log_var[1:]
 
-#Generate and save interpolations 
-print('Generating interpolations')
-my_alfas = np.arange(0.1,1,0.1)
+    #Generate latent vectors for audio_2
+    audio_2_dataset = tf.data.Dataset.from_tensor_slices(C_2).batch(batch_size).prefetch(AUTOTUNE)
+    latent_vecs_mean = tf.constant(0., dtype='float32', shape=(1,latent_dim))
+    latent_vecs_log_var = tf.constant(0., dtype='float32', shape=(1,latent_dim))
 
-for i in range(len(my_alfas)):
-    alfa = my_alfas[i]
-    print('Working on alfa {:2.1f}'.format(alfa))
-    #generate mixed latent vectors    
-    #alfa(latent1-latent2)+latent2 = alfa * latent1 + (1-alfa) * latent2
-    latent_mix_mean = tf.math.add(
-        tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_1_latent_vecs_mean), 
-        tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_mean))
-    latent_mix_log_var = tf.math.add(
-        tf.math.multiply(tf.constant(1-alfa, dtype='float32'),audio_1_latent_vecs_log_var), 
-        tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_log_var))
+    for step, x_batch_train in enumerate(audio_2_dataset):
+        mean, log_var = encoder(x_batch_train, training=False)
+        latent_vecs_mean = tf.concat([latent_vecs_mean, mean], 0)
+        latent_vecs_log_var = tf.concat([latent_vecs_log_var, log_var], 0)
 
-    sampled_latent_mix = Sampling()((latent_mix_mean, latent_mix_log_var))                      
+    audio_2_latent_vecs_mean = latent_vecs_mean[1:]
+    audio_2_latent_vecs_log_var = latent_vecs_log_var[1:]
 
-    decoder_dataset = tf.data.Dataset.from_tensor_slices(sampled_latent_mix).batch(batch_size).prefetch(AUTOTUNE)
+    #Generate and save interpolations 
+    print('Generating interpolations')
+    my_alfas = np.arange(0.1,1,0.1)
 
-    print('Generating DL model outputs')
-    output_C = tf.constant(0., dtype='float32', shape=(1,n_bins))
-    with tf.keras.utils.CustomObjectScope({'Sampling': Sampling}):
-        for step, x_batch_train in enumerate(decoder_dataset):
-            output_C = decoder(sampled_latent_mix,training=False)
-    print('Running phase estimation')           
-    y_inv_audio_mix = librosa.griffinlim_cqt(np.transpose(output_C), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
-    librosa.output.write_wav(os.path.join(my_fixed_interpolations_folder, '{:2d}-x_interpolations_{:2.1f}.wav'.format(i,alfa)),
-                           y_inv_audio_mix, sample_rate)
+    for i in range(len(my_alfas)):
+        alfa = my_alfas[i]
+        print('Working on alfa {:2.1f}'.format(alfa))
+        #generate mixed latent vectors    
+        #alfa(latent1-latent2)+latent2 = alfa * latent1 + (1-alfa) * latent2
+        latent_mix_mean = tf.math.add(
+            tf.math.multiply(tf.constant(1-alfa, dtype='float32'), audio_1_latent_vecs_mean), 
+            tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_mean))
+        latent_mix_log_var = tf.math.add(
+            tf.math.multiply(tf.constant(1-alfa, dtype='float32'),audio_1_latent_vecs_log_var), 
+            tf.math.multiply(tf.constant(alfa, dtype='float32'), audio_2_latent_vecs_log_var))
+
+        sampled_latent_mix = Sampling()((latent_mix_mean, latent_mix_log_var))                      
+
+        decoder_dataset = tf.data.Dataset.from_tensor_slices(sampled_latent_mix).batch(batch_size).prefetch(AUTOTUNE)
+
+        print('Generating DL model outputs')
+        output_C = tf.constant(0., dtype='float32', shape=(1,n_bins))
+        with tf.keras.utils.CustomObjectScope({'Sampling': Sampling}):
+            for step, x_batch_train in enumerate(decoder_dataset):
+                output_C = decoder(sampled_latent_mix,training=False)
+        print('Running phase estimation')           
+        y_inv_audio_mix = librosa.griffinlim_cqt(np.transpose(output_C), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
+        librosa.output.write_wav(my_fixed_interpolations_folder.joinpath('{:2d}-x_interpolations_{:2.1f}.wav'.format(i,alfa)),
+                               y_inv_audio_mix, sample_rate)
 
 # Interpolations of random sections
 print('Generating interpolations between random sections')
 for my_idx in range(num_random_interpolations):
     print('Working on random sections number {}'.format(my_idx))
-    my_interpolations_folder = os.path.join(run_path, 'audio_examples_interpolations')
-    my_interpolation_folder = os.path.join(my_interpolations_folder, 'random-{:2d}'.format(my_idx))
+    my_interpolations_folder = run_path.joinpath('audio_examples_interpolations')
+    my_interpolation_folder = my_interpolations_folder.joinpath('random-{:2d}'.format(my_idx))
     os.makedirs(my_interpolation_folder,exist_ok = True)
     
     my_records = os.listdir(my_audio)
@@ -252,45 +282,55 @@ for my_idx in range(num_random_interpolations):
 
     #Load Audio 1 
     audio_1 = my_records[random.randint(0, len(my_records)-1)]
-    audio_1_path = os.path.join(my_audio, audio_1)
+    audio_1_path = my_audio.joinpath(audio_1)
     audio_1_duration = librosa.get_duration(filename=audio_1_path)
-    audio_1_offset = random.randint(0, int(audio_1_duration)-example_length)
-    audio_1_offset_frames = librosa.time_to_samples(audio_1_offset, sr=sample_rate)//hop_length
+    if audio_1_duration > example_length:
+        audio_1_offset = random.randint(0, int(audio_1_duration)-example_length)
+        audio_1_offset_frames = librosa.time_to_samples(audio_1_offset, sr=sample_rate)//hop_length
+    elif audio_1_duration < example_length:
+        example_length = audio_1_duration
+        audio_1_offset_frames = 0
+        duration_frames = librosa.time_to_samples(example_length, sr=sample_rate)//hop_length
 
     s_1, fs_1 = librosa.load(audio_1_path, duration=example_length, offset=audio_1_offset, sr=None)
-    librosa.output.write_wav(os.path.join(my_interpolation_folder,'original_1.wav'),
+    librosa.output.write_wav(my_interpolation_folder.joinpath('original_1.wav'),
                                s_1, fs_1)
 
     #Load audio 2
     audio_2 =  my_records[random.randint(0, len(my_records)-1)]
-    audio_2_path = os.path.join(my_audio, audio_2)
+    audio_2_path = my_audio.joinpath(audio_2)
     audio_2_duration = librosa.get_duration(filename=audio_2_path)
-    audio_2_offset = random.randint(0, int(audio_2_duration)-example_length)
-    audio_2_offset_frames = librosa.time_to_samples(audio_2_offset, sr=sample_rate)//hop_length
-    my_file_duration = librosa.get_duration(filename=audio_2_path)
+    if audio_2_duration > example_length:
+        audio_2_offset = random.randint(0, int(audio_2_duration)-example_length)
+        audio_2_offset_frames = librosa.time_to_samples(audio_2_offset, sr=sample_rate)//hop_length
+    elif audio_2_duration < example_length:
+        example_length = audio_2_duration
+        audio_2_offset_frames = 0
+        duration_frames = librosa.time_to_samples(example_length, sr=sample_rate)//hop_length
+
 
     s_2, fs_2 = librosa.load(audio_2_path, duration=example_length, offset=audio_2_offset, sr=None)
-    librosa.output.write_wav(os.path.join(my_interpolation_folder,'original_2.wav'),
+    librosa.output.write_wav(my_interpolation_folder.joinpath('original_2.wav'),
                                s_2, fs_2)
 
     #Load audio 1 CQTs
-    cqt_audio_1 = np.load(os.path.join(my_cqt,os.path.splitext(audio_1)[0]+'.npy'))
+    cqt_audio_1 = np.load(my_cqt.joinpath(audio_1_path.stem+'.npy'))
     C_1 = cqt_audio_1[audio_1_offset_frames:(audio_1_offset_frames+duration_frames)]
     print('Generating original-icqt+gL_1.wav')
     y_inv_audio_1 = librosa.griffinlim_cqt(np.transpose(C_1), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
 
     #write original magnitude response +phase estimation
-    librosa.output.write_wav(os.path.join(my_interpolation_folder,'original-icqt+gL_1.wav'),
+    librosa.output.write_wav(my_interpolation_folder.joinpath('original-icqt+gL_1.wav'),
                                y_inv_audio_1, sample_rate)
 
     #Load audio 2 CQTs
-    cqt_audio_2 = np.load(os.path.join(my_cqt,os.path.splitext(audio_2)[0]+'.npy'))
+    cqt_audio_2 = np.load(my_cqt.joinpath(audio_2_path.stem+'.npy'))
     C_2 = cqt_audio_2[audio_2_offset_frames:(audio_2_offset_frames+duration_frames)]
     print('Generating original-icqt+gL_2.wav')
     y_inv_audio_2 = librosa.griffinlim_cqt(np.transpose(C_2), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
 
     #write original magnitude response +phase estimation
-    librosa.output.write_wav(os.path.join(my_interpolation_folder,'original-icqt+gL_2.wav'),
+    librosa.output.write_wav(my_interpolation_folder.joinpath('original-icqt+gL_2.wav'),
                                y_inv_audio_2, sample_rate)
 
     #Generate latent vectors for audio_1
@@ -346,6 +386,9 @@ for my_idx in range(num_random_interpolations):
                 output_C = decoder(sampled_latent_mix,training=False)
         print('Running phase estimation')
         y_inv_audio_mix = librosa.griffinlim_cqt(np.transpose(output_C), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
-        librosa.output.write_wav(os.path.join(my_interpolation_folder,'x_interpolations_{:2.1f}.wav'.format(alfa)),
+        librosa.output.write_wav(my_interpolation_folder.joinpath('x_interpolations_{:2.1f}.wav'.format(alfa)),
                                y_inv_audio_mix, sample_rate)
         print('Saved x_interpolations_{:2.1f}.wav'.format(alfa))
+
+    # Revert back to the original length for the next iteration.
+    duration_frames = librosa.time_to_samples(original_example_length, sr=sample_rate)//hop_length
