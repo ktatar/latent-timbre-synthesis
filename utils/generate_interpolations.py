@@ -276,7 +276,7 @@ for my_idx in range(num_random_interpolations):
     my_interpolation_folder = my_interpolations_folder.joinpath('random-{:2d}'.format(my_idx))
     os.makedirs(my_interpolation_folder,exist_ok = True)
     
-    my_records = my_audio.rglob('*.wav')
+    my_records = os.listdir(my_audio.resolve())
 
     print('loading audio and CQT matrixes')
 
