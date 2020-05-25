@@ -10,7 +10,8 @@
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-type=REQUEUE
 #SBATCH --mail-type=ALL
- 
+#SBATCH --account=rrg-pasquier
+
 module load nixpkgs/16.09  gcc/7.3.0  python/3.7.4 cuda/10.0.130 cudnn/7.6
 source /home/$USER/tf2_gpu/bin/activate
 sleep 5
