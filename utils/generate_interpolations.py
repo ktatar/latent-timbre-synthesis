@@ -285,6 +285,8 @@ for my_idx in range(num_random_interpolations):
     print("Audio 1: {}".format(audio_1))
     audio_1_path = my_audio.joinpath(audio_1)
     audio_1_duration = librosa.get_duration(filename=audio_1_path)
+
+    #Try the example_length given in the config. If the audio file is shorter, decrease the example_length
     if int(audio_1_duration) > example_length:
         if int(audio_1_duration-example_length) > 0:
             audio_1_offset = random.randint(0, int(audio_1_duration-example_length))
@@ -403,4 +405,5 @@ for my_idx in range(num_random_interpolations):
         print('Saved x_interpolations_{:2.1f}.wav'.format(alfa))
 
     # Revert back to the original length for the next iteration.
-    duration_frames = librosa.time_to_samples(original_example_length, sr=sample_rate)//hop_length
+    example_length = original_example_length
+    duration_frames = librosa.time_to_samples(example_length, sr=sample_rate)//hop_length
