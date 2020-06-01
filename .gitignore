@@ -15,5 +15,6 @@
 **/functional/cdcgan
 **/functional/cgan
 **/functional/cqtgan
+**/functional/cvae
 
 
