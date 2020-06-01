@@ -11,3 +11,9 @@
 **.jpeg
 !images/*.jpg
 **/utils/lspace-vis-bhtsne
+**/class
+**/functional/cdcgan
+**/functional/cgan
+**/functional/cqtgan
+
+
