@@ -22,6 +22,8 @@ parser.add_argument('--config', type=str, default ='./lspace_vis.ini' , help='pa
 args = parser.parse_args()
 
 #Get configs
+print("Getting configs...")
+
 config_path = args.config
 config = configparser.ConfigParser(allow_no_value=True)
 try: 
@@ -39,6 +41,8 @@ n_bins = int(num_octaves * bins_per_octave)
 n_iter = config['audio'].getint('n_iter')
 
 #dataset
+print("Init dataset...")
+
 dataset = Path(config['dataset'].get('datapath'))
 if not dataset.exists():
     raise FileNotFoundError(dataset.resolve())
@@ -78,68 +82,73 @@ audio_1_offset = config['extra'].getint('audio_1_offset')
 interpolations_audio_2 = config['extra'].get('interpolations_audio_2')
 audio_2_offset = config['extra'].getint('audio_2_offset')
 
-AUTOTUNE = tf.data.experimental.AUTOTUNE
+# AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-#We need to define the custom Sampling Layer
-class Sampling(layers.Layer):
-  #Uses (z_mean, z_log_var) to sample z, the vector encoding a digit.
+# print("Loading DL model...")
+# #We need to define the custom Sampling Layer
+# class Sampling(layers.Layer):
+#   #Uses (z_mean, z_log_var) to sample z, the vector encoding a digit.
 
-  def call(self, inputs):
-    z_mean, z_log_var = inputs
-    batch = tf.shape(z_mean)[0]
-    dim = tf.shape(z_mean)[1]
-    epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
-    return z_mean + tf.exp(0.5 * z_log_var) * epsilon
+#   def call(self, inputs):
+#     z_mean, z_log_var = inputs
+#     batch = tf.shape(z_mean)[0]
+#     dim = tf.shape(z_mean)[1]
+#     epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
+#     return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
-#load the model
-my_model_path = workspace.joinpath('model').joinpath('mymodel_last.h5')
+# #load the model
+# my_model_path = workspace.joinpath('model').joinpath('mymodel_last.h5')
 
-with tf.keras.utils.CustomObjectScope({'Sampling': Sampling}):
-  trained_model = tf.keras.models.load_model(my_model_path)
+# with tf.keras.utils.CustomObjectScope({'Sampling': Sampling}):
+#   trained_model = tf.keras.models.load_model(my_model_path)
 
-trained_model.summary()
+# trained_model.summary()
 
-# create Encoder model
-encoder = tf.keras.Model(inputs = trained_model.input, outputs = [trained_model.get_layer("z_mean").output, trained_model.get_layer("z_log_var").output], name='encoder')
-encoder.summary()
+# # create Encoder model
+# encoder = tf.keras.Model(inputs = trained_model.input, outputs = [trained_model.get_layer("z_mean").output, trained_model.get_layer("z_log_var").output], name='encoder')
+# encoder.summary()
 
-# create Decoder model
-decoder = tf.keras.Model(inputs = trained_model.get_layer('decoder').input, outputs = trained_model.get_layer('decoder').output, name='decoder')
-decoder.summary()
+# # create Decoder model
+# decoder = tf.keras.Model(inputs = trained_model.get_layer('decoder').input, outputs = trained_model.get_layer('decoder').output, name='decoder')
+# decoder.summary()
 
-#Generate latent vectors for all cqt files
-remaining = len(os.listdir(my_cqt))
-print(os.listdir(my_cqt))
-new_loop = True
-audio_all_latent_vecs_mean = []
-audio_all_latent_vecs_log_var = []
+# #Generate latent vectors for all cqt files
+# print("Loading CQT files to the memory...")
+# print("CQT dir: {}".format(my_cqt))
+# remaining = len(os.listdir(my_cqt))
+# print("Total files: {}".format(os.listdir(my_cqt)))
+# new_loop = True
+# audio_all_latent_vecs_mean = []
+# audio_all_latent_vecs_log_var = []
 
 
-for f in os.listdir(my_cqt):  
-    if f.endswith('.npy'):
-        print('{:4d} remaining, adding<- {}'.format(remaining, f))
-        file_path = my_cqt.joinpath(f)
-        new_array = np.load(file_path)
+# for f in os.listdir(my_cqt):  
+#     if f.endswith('.npy'):
+#         print('{:4d} remaining, adding<- {}'.format(remaining, f))
+#         file_path = my_cqt.joinpath(f)
+#         new_array = np.load(file_path)
               
-        audio_all_dataset = tf.data.Dataset.from_tensor_slices(new_array).batch(batch_size).prefetch(AUTOTUNE) 
-        latent_vecs_mean = tf.constant(0., dtype='float32', shape=(1,latent_dim))
-        latent_vecs_log_var = tf.constant(0., dtype='float32', shape=(1,latent_dim))
+#         audio_all_dataset = tf.data.Dataset.from_tensor_slices(new_array).batch(batch_size).prefetch(AUTOTUNE) 
+#         latent_vecs_mean = tf.constant(0., dtype='float32', shape=(1,latent_dim))
+#         latent_vecs_log_var = tf.constant(0., dtype='float32', shape=(1,latent_dim))
 
-        for step, x_batch_train in enumerate(audio_all_dataset):
-            mean, log_var = encoder(x_batch_train, training=False)
-            latent_vecs_mean = tf.concat([latent_vecs_mean, mean], 0)
-            latent_vecs_log_var = tf.concat([latent_vecs_log_var, log_var], 0)
-        if new_loop:
-            num_frames_per_file = [len(new_array)]
-            audio_all_latent_vecs_mean = latent_vecs_mean[1:]
-            audio_all_latent_vecs_log_var = latent_vecs_log_var[1:]
-            new_loop = False
-        else:
-            num_frames_per_file = np.concatenate((num_frames_per_file, [len(new_array)]), axis=0)
-            audio_all_latent_vecs_mean = np.concatenate((audio_all_latent_vecs_mean, latent_vecs_mean[1:]), axis=0)
-            audio_all_latent_vecs_log_var = np.concatenate((audio_all_latent_vecs_log_var, latent_vecs_log_var[1:]), axis=0)
-        remaining -= 1
-print("audio_all_latent_vecs_mean: ", audio_all_latent_vecs_mean.shape)
+#         for step, x_batch_train in enumerate(audio_all_dataset):
+#             mean, log_var = encoder(x_batch_train, training=False)
+#             latent_vecs_mean = tf.concat([latent_vecs_mean, mean], 0)
+#             latent_vecs_log_var = tf.concat([latent_vecs_log_var, log_var], 0)
+#         if new_loop:
+#             num_frames_per_file = [len(new_array)]
+#             audio_all_latent_vecs_mean = latent_vecs_mean[1:]
+#             audio_all_latent_vecs_log_var = latent_vecs_log_var[1:]
+#             new_loop = False
+#         else:
+#             num_frames_per_file = np.concatenate((num_frames_per_file, [len(new_array)]), axis=0)
+#             audio_all_latent_vecs_mean = np.concatenate((audio_all_latent_vecs_mean, latent_vecs_mean[1:]), axis=0)
+#             audio_all_latent_vecs_log_var = np.concatenate((audio_all_latent_vecs_log_var, latent_vecs_log_var[1:]), axis=0)
+#         remaining -= 1
+# print("audio_all_latent_vecs_mean: ", audio_all_latent_vecs_mean.shape)
+
+audio_all_latent_vecs_mean = np.load(workspace.joinpath("all_latent_vecs").joinpath('all_latent_vecs_mean.npy'))
 
 tsne = TSNE(n_components=2, 
     n_iter=1000, verbose=1, 
