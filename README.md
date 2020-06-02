@@ -133,3 +133,6 @@ You can easily set everything from where you left by clicking,
 2- The run folder message box under "Drop Run Folder"
 
 3- "set previous audio files again" message box in the Python Audio section
+
+# The Rest...
+Training instructions and an example dataset is upcoming in the following days...
