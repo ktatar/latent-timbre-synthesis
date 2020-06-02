@@ -55,7 +55,6 @@ if not my_cqt.exists():
 
 my_audio = dataset / 'audio'
 
-
 #Model configs
 try:
     print(config['VAE'])
@@ -110,9 +109,11 @@ decoder.summary()
 
 #Generate latent vectors for all cqt files
 remaining = len(os.listdir(my_cqt))
+print(os.listdir(my_cqt))
 new_loop = True
 audio_all_latent_vecs_mean = []
 audio_all_latent_vecs_log_var = []
+
 
 for f in os.listdir(my_cqt):  
     if f.endswith('.npy'):
