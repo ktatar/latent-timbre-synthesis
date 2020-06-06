@@ -22,6 +22,8 @@ parser.add_argument('--config', type=str, default ='./lspace_vis.ini' , help='pa
 args = parser.parse_args()
 
 #Get configs
+print("Getting configs...")
+
 config_path = args.config
 config = configparser.ConfigParser(allow_no_value=True)
 try: 
@@ -39,6 +41,8 @@ n_bins = int(num_octaves * bins_per_octave)
 n_iter = config['audio'].getint('n_iter')
 
 #dataset
+print("Init dataset...")
+
 dataset = Path(config['dataset'].get('datapath'))
 if not dataset.exists():
     raise FileNotFoundError(dataset.resolve())
@@ -54,7 +58,6 @@ if not my_cqt.exists():
     raise FileNotFoundError(my_cqt.resolve())
 
 my_audio = dataset / 'audio'
-
 
 #Model configs
 try:
@@ -81,6 +84,7 @@ audio_2_offset = config['extra'].getint('audio_2_offset')
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
+print("Loading DL model...")
 #We need to define the custom Sampling Layer
 class Sampling(layers.Layer):
   #Uses (z_mean, z_log_var) to sample z, the vector encoding a digit.
@@ -109,10 +113,14 @@ decoder = tf.keras.Model(inputs = trained_model.get_layer('decoder').input, outp
 decoder.summary()
 
 #Generate latent vectors for all cqt files
+print("Loading CQT files to the memory...")
+print("CQT dir: {}".format(my_cqt))
 remaining = len(os.listdir(my_cqt))
+print("Total files: {}".format(len(os.listdir(my_cqt))))
 new_loop = True
 audio_all_latent_vecs_mean = []
 audio_all_latent_vecs_log_var = []
+
 
 for f in os.listdir(my_cqt):  
     if f.endswith('.npy'):
@@ -138,28 +146,38 @@ for f in os.listdir(my_cqt):
             audio_all_latent_vecs_mean = np.concatenate((audio_all_latent_vecs_mean, latent_vecs_mean[1:]), axis=0)
             audio_all_latent_vecs_log_var = np.concatenate((audio_all_latent_vecs_log_var, latent_vecs_log_var[1:]), axis=0)
         remaining -= 1
-print("audio_all_latent_vecs_mean: ", audio_all_latent_vecs_mean.shape)
 
-tsne = TSNE(n_components=2, 
-    n_iter=1000, verbose=1, 
-    init='pca', n_jobs = -1)
-Z_tsne = tsne.fit_transform(audio_all_latent_vecs_mean)
-np.save(workspace.joinpath('Z_tsne-scatter.npy'), Z_tsne)
-np.save(workspace.joinpath('num_frames_per_file.npy'), num_frames_per_file)
-Z_tsne_x = Z_tsne[:,0]
-Z_tsne_y = Z_tsne[:,1]
+print("Saving...")
 
-audio_all_latent_vecs_mean = []
-audio_all_latent_vecs_log_var = []
+print("audio_all_latent_vecs_mean shape: {}".format(audio_all_latent_vecs_mean.shape))
+os.makedirs(workspace.joinpath("all_latent_vecs"), exist_ok=True)
+np.save(workspace.joinpath("all_latent_vecs").joinpath('all_latent_vecs_mean.npy'), audio_all_latent_vecs_mean)
 
-# scatter plot latent vectors of all sound files
-plt.figure()
-fig, ax = plt.subplots()
+print("audio_all_latent_vecs_log_var shape: {}".format(audio_all_latent_vecs_log_var.shape))
+np.save(workspace.joinpath("all_latent_vecs").joinpath('all_latent_vecs_log_var.npy'), audio_all_latent_vecs_log_var)
 
-for i in range(len(num_frames_per_file)):
-    start = np.sum(num_frames_per_file[:i])
-    ax.scatter(Z_tsne_x[start: start+num_frames_per_file[i] ], Z_tsne_y[start: start+num_frames_per_file[i]], s=0.01)
 
-ax.set_xlabel('$t-SNE.1$')
-ax.set_ylabel('$t-SNE.2$')
-fig.savefig('full_latent_space_scatter.png', dpi=600)
+#Running TSNE visualization
+# tsne = TSNE(n_components=2, 
+#     n_iter=1000, verbose=1, 
+#     init='pca', n_jobs = -1)
+# Z_tsne = tsne.fit_transform(audio_all_latent_vecs_mean)
+# np.save(workspace.joinpath('Z_tsne-scatter.npy'), Z_tsne)
+# np.save(workspace.joinpath('num_frames_per_file.npy'), num_frames_per_file)
+# Z_tsne_x = Z_tsne[:,0]
+# Z_tsne_y = Z_tsne[:,1]
+
+# audio_all_latent_vecs_mean = []
+# audio_all_latent_vecs_log_var = []
+
+# # scatter plot latent vectors of all sound files
+# plt.figure()
+# fig, ax = plt.subplots()
+
+# for i in range(len(num_frames_per_file)):
+#     start = np.sum(num_frames_per_file[:i])
+#     ax.scatter(Z_tsne_x[start: start+num_frames_per_file[i] ], Z_tsne_y[start: start+num_frames_per_file[i]], s=0.01)
+
+# ax.set_xlabel('$t-SNE.1$')
+# ax.set_ylabel('$t-SNE.2$')
+# fig.savefig('full_latent_space_scatter.png', dpi=600)

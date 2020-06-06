@@ -126,7 +126,7 @@ for my_idx in range(num_random_interpolations):
     audio_1_offset_frames = librosa.time_to_samples(audio_1_offset, sr=sample_rate)//hop_length
 
     s_1, fs_1 = librosa.load(audio_1_path, duration=example_length, offset=audio_1_offset, sr=None)
-    librosa.output.write_wav(os.path.join(my_interpolation_folder,'original_1.wav'),
+    librosa.output.write_wav(os.path.join(my_interpolation_folder,'00-original_1.wav'),
                                s_1, fs_1)
 
     #Load audio 2
@@ -140,7 +140,7 @@ for my_idx in range(num_random_interpolations):
     audio_2_offset_frames = librosa.time_to_samples(audio_2_offset, sr=sample_rate)//hop_length
 
     s_2, fs_2 = librosa.load(audio_2_path, duration=example_length, offset=audio_2_offset, sr=None)
-    librosa.output.write_wav(os.path.join(my_interpolation_folder,'original_2.wav'),
+    librosa.output.write_wav(os.path.join(my_interpolation_folder,'00-original_2.wav'),
                                s_2, fs_2)
 
     example_length = min(example_length, audio_1_duration, audio_2_duration)
@@ -154,7 +154,7 @@ for my_idx in range(num_random_interpolations):
     y_inv_audio_1 = librosa.griffinlim_cqt(np.transpose(C_1), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
 
     #write original magnitude response +phase estimation
-    librosa.output.write_wav(os.path.join(my_interpolation_folder,'original-icqt+gL_1.wav'),
+    librosa.output.write_wav(os.path.join(my_interpolation_folder,'00-original-icqt+gL_1.wav'),
                                y_inv_audio_1, sample_rate)
 
     #Load audio 2 CQTs
@@ -164,7 +164,7 @@ for my_idx in range(num_random_interpolations):
     y_inv_audio_2 = librosa.griffinlim_cqt(np.transpose(C_2), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
 
     #write original magnitude response +phase estimation
-    librosa.output.write_wav(os.path.join(my_interpolation_folder,'original-icqt+gL_2.wav'),
+    librosa.output.write_wav(os.path.join(my_interpolation_folder,'00-original-icqt+gL_2.wav'),
                                y_inv_audio_2, sample_rate)
 
     #Generate latent vectors for audio_1
@@ -220,6 +220,6 @@ for my_idx in range(num_random_interpolations):
                 output_C = decoder(sampled_latent_mix,training=False)
         print('Running phase estimation')
         y_inv_audio_mix = librosa.griffinlim_cqt(np.transpose(output_C), sr=sample_rate, n_iter=n_iter, hop_length=hop_length, bins_per_octave=bins_per_octave, dtype=np.float32)
-        librosa.output.write_wav(os.path.join(my_interpolation_folder,'x_interpolations_{:2.1f}.wav'.format(alfa)),
+        librosa.output.write_wav(os.path.join(my_interpolation_folder,'{:02d}-x_interpolations_{:2.1f}.wav'.format(i+1,alfa)),
                                y_inv_audio_mix, sample_rate)
-        print('Saved x_interpolations_{:2.1f}.wav'.format(alfa))
+        print('Saved {:02d}-x_interpolations_{:2.1f}.wav'.format(i+1,alfa))
