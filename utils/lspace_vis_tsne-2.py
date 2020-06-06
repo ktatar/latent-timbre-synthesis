@@ -2,9 +2,9 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 print('script started...')
-import tensorflow as tf
-from tensorflow.keras import layers
-print('tensorflow loaded...')
+#import tensorflow as tf
+#from tensorflow.keras import layers
+#print('tensorflow loaded...')
 
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.manifold import TSNE
