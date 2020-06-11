@@ -16,5 +16,6 @@
 **/functional/cgan
 **/functional/cqtgan
 **/functional/cvae
+**cdr*.out
 
 
