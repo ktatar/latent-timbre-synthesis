@@ -108,4 +108,4 @@ for i in range(len(num_frames_per_file)):
 
 ax.set_xlabel('$t-SNE.1$')
 ax.set_ylabel('$t-SNE.2$')
-fig.savefig('full_latent_space_scatter.png', dpi=600)
+fig.savefig('full_latent_space_scatter_logvar.png', dpi=600)
