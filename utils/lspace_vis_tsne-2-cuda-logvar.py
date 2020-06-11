@@ -8,8 +8,7 @@ print('script started...')
 #from tensorflow.keras import layers
 #print('tensorflow loaded...')
 
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.manifold import TSNE
+from cuml.manifold import TSNE
 import random
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,7 +22,7 @@ import json
 
 #Parse arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str, default ='./lspace_vis.ini' , help='path to the config file')
+parser.add_argument('--config', type=str, default ='./lspace_vis_tsne.ini' , help='path to the config file')
 args = parser.parse_args()
 
 #Get configs
@@ -87,21 +86,17 @@ audio_1_offset = config['extra'].getint('audio_1_offset')
 interpolations_audio_2 = config['extra'].get('interpolations_audio_2')
 audio_2_offset = config['extra'].getint('audio_2_offset')
 
-
-
-audio_all_latent_vecs_mean = np.load(workspace.joinpath("all_latent_vecs").joinpath('all_latent_vecs_mean.npy'))
 num_frames_per_file = np.load(workspace.joinpath('num_frames_per_file.npy'))
+audio_all_latent_vecs = np.load(workspace.joinpath("all_latent_vecs").joinpath('all_latent_vecs_logvar.npy'))
 
-tsne = TSNE(n_components=2, 
-    n_iter=1000, verbose=1, 
-    init='pca', n_jobs = -1)
-Z_tsne = tsne.fit_transform(audio_all_latent_vecs_mean)
-np.save(workspace.joinpath('Z_tsne-scatter.npy'), Z_tsne)
+tsne = TSNE(n_components=2, perplexity=30, n_iter=1000)
+
+Z_tsne = tsne.fit_transform(audio_all_latent_vecs)
+np.save(workspace.joinpath('Z_tsne_logvar.npy'), Z_tsne)
 Z_tsne_x = Z_tsne[:,0]
 Z_tsne_y = Z_tsne[:,1]
 
-audio_all_latent_vecs_mean = []
-audio_all_latent_vecs_log_var = []
+audio_all_latent_vecs = []
 
 # scatter plot latent vectors of all sound files
 plt.figure()

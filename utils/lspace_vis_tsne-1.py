@@ -155,29 +155,5 @@ np.save(workspace.joinpath("all_latent_vecs").joinpath('all_latent_vecs_mean.npy
 
 print("audio_all_latent_vecs_log_var shape: {}".format(audio_all_latent_vecs_log_var.shape))
 np.save(workspace.joinpath("all_latent_vecs").joinpath('all_latent_vecs_log_var.npy'), audio_all_latent_vecs_log_var)
+np.save(workspace.joinpath('num_frames_per_file.npy'), num_frames_per_file)
 
-
-#Running TSNE visualization
-# tsne = TSNE(n_components=2, 
-#     n_iter=1000, verbose=1, 
-#     init='pca', n_jobs = -1)
-# Z_tsne = tsne.fit_transform(audio_all_latent_vecs_mean)
-# np.save(workspace.joinpath('Z_tsne-scatter.npy'), Z_tsne)
-# np.save(workspace.joinpath('num_frames_per_file.npy'), num_frames_per_file)
-# Z_tsne_x = Z_tsne[:,0]
-# Z_tsne_y = Z_tsne[:,1]
-
-# audio_all_latent_vecs_mean = []
-# audio_all_latent_vecs_log_var = []
-
-# # scatter plot latent vectors of all sound files
-# plt.figure()
-# fig, ax = plt.subplots()
-
-# for i in range(len(num_frames_per_file)):
-#     start = np.sum(num_frames_per_file[:i])
-#     ax.scatter(Z_tsne_x[start: start+num_frames_per_file[i] ], Z_tsne_y[start: start+num_frames_per_file[i]], s=0.01)
-
-# ax.set_xlabel('$t-SNE.1$')
-# ax.set_ylabel('$t-SNE.2$')
-# fig.savefig('full_latent_space_scatter.png', dpi=600)
