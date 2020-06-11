@@ -90,13 +90,17 @@ The algorithm synthesizes the audio by calculating every audio frame using inver
 In the code below, change the [my-latent-timbre-synthesis-master] section to the path of the latent-timbre-synthesis-master folder on your computer. 
 You can find that path by,
 
-- On Windows: hold shift and right-click on the folder, and then select "copy as path"
-- On Mac: right-click on the folder, hold alt (option) key and select "Copy ... as pathname"
+- On Windows: 
+    - hold shift and right-click on the interpolate_two folder in the repo, and then select "copy as path"
+    - `cd [paste-the-path-here]`
+    - For example, it would look like this on my PC: `cd C:\Users\tatar\latent-timbre-synthesis\app\interpolate_two`
+- On Mac: 
+    - right-click on the folder, hold alt (option) key and select "Copy ... as pathname"
+    - `cd [paste-the-path-here]`
+    - - For example, it would look like this on my Mac: `cd /Users/tatar/Desktop/latent-timbre-synthesis\app\interpolate_two`
 - On Linux: if you can use linux, you got this (:
 
-`cd [my-latent-timbre-synthesis-master]\app\interpolate_two`
-
-3- Run main.py
+3- Run main.py in the interpolate two folder:
 
 `python main.py`
 
