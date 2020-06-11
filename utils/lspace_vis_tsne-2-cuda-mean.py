@@ -8,7 +8,7 @@ print('script started...')
 #from tensorflow.keras import layers
 #print('tensorflow loaded...')
 
-from cuml.manifold import TSNE
+from tsnecuda import TSNE
 import random
 import numpy as np
 import matplotlib.pyplot as plt
