@@ -1,6 +1,7 @@
 # Latent Timbre Synthesis
 
 Latent Timbre Synthesis (LTS) is a deep learning audio synthesis architecture that learns from audio sample dataset.
+
 Original repo is hosted at [https://gitlab.com/ktatar/latent-timbre-synthesis/](https://gitlab.com/ktatar/latent-timbre-synthesis/). 
 
 ## Latent Timbre Synthesis using Variational Auto-Encoders
