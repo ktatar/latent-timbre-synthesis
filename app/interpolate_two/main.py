@@ -7,7 +7,7 @@ import ctypes
 import os, sys, argparse, time, random
 from pathlib import Path
 import librosa
-import pdb
+import soundfile as sf
 import configparser
 from pythonosc import dispatcher
 from pythonosc import osc_server 
@@ -444,7 +444,7 @@ def save_audio(address: str, *osc_arguments: List[Any]) -> None:
             continue
         else:
             #save the audio to a wav file
-            librosa.output.write_wav(save_path, generated_audio, sr=sample_rate)
+            sf.write(save_path, generated_audio, sample_rate)
             print_plus_osc('Saved the last generated sound at the path: {}'.format(save_path))
             break
 
